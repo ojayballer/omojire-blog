@@ -12,7 +12,7 @@
 <script>
 MathJax = {
   tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], tags: 'ams' },
-  svg: { fontCache: 'global' }
+  svg: { fontCache: 'global', scale: 1.15 }
 };
 </script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js"></script>
@@ -405,7 +405,7 @@ code:not(pre code) {
 /* ══════════════════════════════════════════════════════════════════
    MATH (MathJax)
    ══════════════════════════════════════════════════════════════════ */
-.MathJax { font-size: 1em !important; }
+.MathJax { font-size: 1.1em !important; }
 .math-block {
   margin: 24px 0;
   padding: 16px;
@@ -1422,6 +1422,7 @@ $$\text{Loss} = \text{Reconstruction Loss} + \beta \cdot D_{KL}\big(q_\phi(z|x) 
     <li>Kingma, D. P., & Welling, M. (2019). <a href="https://arxiv.org/abs/1906.02691">An Introduction to Variational Autoencoders</a>. Foundations and Trends in Machine Learning.</li>
     <li>Kingma, D. P., & Ba, J. (2015). <a href="https://arxiv.org/abs/1412.6980">Adam: A Method for Stochastic Optimization</a>. ICLR 2015.</li>
     <li>Higgins, I., et al. (2017). <a href="https://openreview.net/forum?id=Sy2fzU9gl">β-VAE: Learning Basic Visual Concepts with a Constrained Variational Framework</a>. ICLR 2017.</li>
+    <li>Comi, M. (2025). <a href="https://maurocomi.com/blog/vae.html">Building a Modern Variational Autoencoder (VAE) from Scratch</a>. maurocomi.com.</li>
   </ol>
 </div>
 
