@@ -412,19 +412,18 @@ code:not(pre code) {
   background: rgba(49, 120, 198, 0.03);
   border-radius: 10px;
   border: 1px solid rgba(49, 120, 198, 0.08);
-  overflow: hidden;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  -ms-overflow-style: none;
+  text-align: center;
 }
-.math-block mjx-container {
-  overflow: hidden !important;
-  max-width: 100% !important;
-}
-.math-block mjx-container svg {
-  max-width: 100% !important;
-  height: auto !important;
-}
+.math-block::-webkit-scrollbar { display: none; }
 @media (max-width: 600px) {
-  .math-block { padding: 12px 10px; }
-  .math-block mjx-container svg { transform: scale(0.75); transform-origin: left center; }
+  .math-block { padding: 14px 8px; overflow-x: auto; scrollbar-width: none; -ms-overflow-style: none; text-align: center; }
+  .math-block::-webkit-scrollbar { display: none; }
+  .math-block mjx-container { display: inline-block !important; }
+  .math-block mjx-container svg { max-width: none !important; height: auto !important; }
 }
 
 /* ══════════════════════════════════════════════════════════════════
