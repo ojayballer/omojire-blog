@@ -5,8 +5,10 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Convolutional Beta VAE from Scratch in JAX</title>
 
+<!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600;8..60,700&family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
+<!-- MathJax -->
 <script>
 MathJax = {
   tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], tags: 'ams' },
@@ -55,8 +57,8 @@ body {
   font-family: 'Source Serif 4', Georgia, serif;
   background: var(--bg);
   color: var(--text);
-  font-size: 18px;
-  line-height: 1.75;
+  font-size: 16px;
+  line-height: 1.7;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -129,56 +131,33 @@ body {
 /* ══════════════════════════════════════════════════════════════════
    TABLE OF CONTENTS
    ══════════════════════════════════════════════════════════════════ */
-.toc {
-  background: var(--bg-warm);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 28px 32px;
-  margin-bottom: 48px;
-}
-.toc h3 {
+.part-label {
   font-family: 'DM Sans', sans-serif;
-  font-size: 0.9em;
   font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
-  color: var(--text-muted);
-  margin-bottom: 16px;
+  font-size: 0.95em;
 }
-.toc ul {
-  list-style: none;
-}
-.toc > ul > li {
-  margin-bottom: 6px;
-}
-.toc ul ul {
-  margin-left: 20px;
-  margin-top: 4px;
-}
-.toc a {
+details .details-content ul { list-style: none; }
+details .details-content ul ul { margin-left: 20px; margin-top: 4px; }
+details .details-content a {
   font-family: 'DM Sans', sans-serif;
   font-size: 0.92em;
   color: var(--text);
   text-decoration: none;
   transition: color 0.2s;
 }
-.toc a:hover { color: var(--accent-blue); }
-.toc .part-label {
-  font-weight: 700;
-  font-size: 0.95em;
-}
+details .details-content a:hover { color: var(--accent-blue); }
 
 /* ══════════════════════════════════════════════════════════════════
    PART HEADERS
    ══════════════════════════════════════════════════════════════════ */
 .part-header {
   font-family: 'DM Sans', sans-serif;
-  font-size: 1.5em;
+  font-size: 1.15em;
   font-weight: 700;
-  padding: 18px 28px;
-  border-radius: 10px;
+  padding: 12px 22px;
+  border-radius: 8px;
   color: #fff;
-  margin: 56px 0 32px;
+  margin: 48px 0 28px;
   letter-spacing: -0.01em;
   position: relative;
   overflow: hidden;
@@ -200,7 +179,7 @@ body {
    ══════════════════════════════════════════════════════════════════ */
 h2 {
   font-family: 'DM Sans', sans-serif;
-  font-size: 1.55em;
+  font-size: 1.35em;
   font-weight: 700;
   color: var(--text);
   margin: 48px 0 20px;
@@ -240,30 +219,21 @@ h3 {
 pre {
   background: var(--code-bg);
   border-radius: 12px;
-  padding: 24px 28px;
-  overflow-x: auto;
+  padding: 20px 22px;
+  overflow-x: hidden;
+  overflow-y: hidden;
   margin: 24px 0;
   border: 1px solid rgba(255,255,255,0.06);
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-  position: relative;
-}
-pre::before {
-  content: attr(data-lang);
-  position: absolute;
-  top: 10px;
-  right: 16px;
-  font-family: 'DM Sans', sans-serif;
-  font-size: 0.7em;
-  font-weight: 600;
-  color: rgba(255,255,255,0.25);
-  text-transform: uppercase;
-  letter-spacing: 0.08em;
 }
 pre code {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.82em;
-  line-height: 1.7;
+  font-size: 0.7em;
+  line-height: 1.6;
   color: var(--code-text);
+  white-space: pre-wrap;
+  word-break: break-all;
+  overflow-wrap: break-word;
 }
 
 /* Syntax highlighting classes */
@@ -315,11 +285,17 @@ code:not(pre code) {
 .callout strong {
   display: block;
   font-family: 'DM Sans', sans-serif;
-  font-size: 0.9em;
+  font-size: 0.88em;
   font-weight: 700;
   margin-bottom: 8px;
   letter-spacing: 0.02em;
 }
+.callout p {
+  margin-bottom: 8px;
+  word-wrap: break-word;
+  overflow-wrap: break-word;
+}
+.callout p:last-child { margin-bottom: 0; }
 .callout.info strong { color: var(--accent-blue); }
 .callout.warning strong { color: var(--accent-red); }
 .callout.success strong { color: var(--accent-green); }
@@ -334,12 +310,14 @@ code:not(pre code) {
   padding: 24px 28px;
   margin: 24px 0;
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.8em;
-  line-height: 2;
+  font-size: 0.72em;
+  line-height: 1.8;
   color: var(--code-text);
   border: 1px solid rgba(255,255,255,0.06);
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
-  overflow-x: auto;
+  overflow-x: hidden;
+  white-space: normal;
+  word-break: break-word;
 }
 .arch-diagram .layer { color: #89b4fa; font-weight: 600; }
 .arch-diagram .shape { color: #a6e3a1; }
@@ -428,12 +406,24 @@ code:not(pre code) {
    ══════════════════════════════════════════════════════════════════ */
 .MathJax { font-size: 1em !important; }
 .math-block {
-  margin: 28px 0;
-  padding: 20px;
+  margin: 24px 0;
+  padding: 16px;
   background: rgba(49, 120, 198, 0.03);
   border-radius: 10px;
   border: 1px solid rgba(49, 120, 198, 0.08);
-  overflow-x: auto;
+  overflow: hidden;
+}
+.math-block mjx-container {
+  overflow: hidden !important;
+  max-width: 100% !important;
+}
+.math-block mjx-container svg {
+  max-width: 100% !important;
+  height: auto !important;
+}
+@media (max-width: 600px) {
+  .math-block { padding: 12px 10px; }
+  .math-block mjx-container svg { transform: scale(0.75); transform-origin: left center; }
 }
 
 /* ══════════════════════════════════════════════════════════════════
@@ -485,13 +475,16 @@ a:hover { text-decoration: underline; }
 .footer-bar a {
   font-family: 'DM Sans', sans-serif;
   font-weight: 600;
-  font-size: 1em;
+  font-size: 0.9em;
   color: var(--accent-blue);
   text-decoration: none;
-  padding: 12px 28px;
+  padding: 10px 20px;
   border: 2px solid var(--accent-blue);
   border-radius: 8px;
   transition: all 0.2s;
+  display: inline-block;
+  max-width: 90%;
+  text-align: center;
 }
 .footer-bar a:hover {
   background: var(--accent-blue);
@@ -503,11 +496,105 @@ a:hover { text-decoration: underline; }
    RESPONSIVE
    ══════════════════════════════════════════════════════════════════ */
 @media (max-width: 600px) {
-  .hero h1 { font-size: 1.8em; }
-  .part-header { font-size: 1.2em; padding: 14px 20px; }
-  pre { padding: 16px 18px; }
-  .arch-diagram { padding: 16px 18px; font-size: 0.72em; }
-  .article-container { padding: 20px 16px 60px; }
+  body { font-size: 14px; }
+  .hero h1 { font-size: 1.5em; }
+  .hero .subtitle { font-size: 0.9em; }
+  .part-header { font-size: 1em; padding: 10px 16px; }
+  h2 { font-size: 1.15em; }
+  pre { padding: 14px 14px; }
+  pre code { font-size: 0.65em; }
+  .arch-diagram { padding: 12px 14px; font-size: 0.62em; line-height: 1.7; }
+  .article-container { padding: 16px 14px 50px; }
+  .callout { padding: 14px 16px; font-size: 0.9em; }
+  .summary-box { padding: 16px 18px; }
+  .badge { font-size: 0.75em; padding: 2px 6px; }
+  .metrics-table { font-size: 0.85em; }
+  .metrics-table th, .metrics-table td { padding: 8px 12px; }
+  .tag { font-size: 0.65em; }
+  .img-block .caption { font-size: 0.8em; }
+  .references ol { font-size: 0.82em; }
+}
+
+
+/* Architecture flow diagrams */
+.arch-visual {
+  margin: 24px 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.arch-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.arch-box {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.75em;
+  font-weight: 600;
+  padding: 6px 12px;
+  border-radius: 6px;
+  white-space: nowrap;
+}
+.arch-box.conv { background: rgba(214, 64, 69, 0.12); color: var(--accent-red); border: 1px solid rgba(214, 64, 69, 0.2); }
+.arch-box.tconv { background: rgba(232, 118, 58, 0.12); color: var(--accent-orange); border: 1px solid rgba(232, 118, 58, 0.2); }
+.arch-box.dense { background: rgba(49, 120, 198, 0.12); color: var(--accent-blue); border: 1px solid rgba(49, 120, 198, 0.2); }
+.arch-box.act { background: rgba(197, 154, 46, 0.12); color: var(--accent-gold); border: 1px solid rgba(197, 154, 46, 0.2); }
+.arch-box.shape { background: rgba(45, 158, 110, 0.08); color: var(--accent-green); border: 1px solid rgba(45, 158, 110, 0.15); font-weight: 500; }
+.arch-box.param { background: rgba(124, 92, 191, 0.12); color: var(--accent-purple); border: 1px solid rgba(124, 92, 191, 0.2); }
+.arch-box.op { background: rgba(108, 112, 134, 0.1); color: var(--text-muted); border: 1px solid rgba(108, 112, 134, 0.15); font-weight: 500; }
+.arch-arrow {
+  color: var(--text-light);
+  font-size: 0.85em;
+  flex-shrink: 0;
+}
+@media (max-width: 600px) {
+  .arch-box { font-size: 0.65em; padding: 4px 8px; }
+  .arch-arrow { font-size: 0.75em; }
+}
+
+/* Expandable/Collapsible sections */
+details {
+  margin: 20px 0;
+  border-radius: 10px;
+  overflow: hidden;
+}
+details summary {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 0.92em;
+  cursor: pointer;
+  padding: 14px 20px;
+  background: var(--bg-warm);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  list-style: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  transition: background 0.2s;
+  color: var(--text);
+}
+details summary:hover { background: #ede8de; }
+details summary::before {
+  content: '▶';
+  font-size: 0.7em;
+  color: var(--accent-blue);
+  transition: transform 0.2s;
+}
+details[open] summary::before { transform: rotate(90deg); }
+details[open] summary {
+  border-radius: 10px 10px 0 0;
+  border-bottom: none;
+}
+details .details-content {
+  padding: 16px 20px;
+  background: var(--bg-warm);
+  border: 1px solid var(--border);
+  border-top: none;
+  border-radius: 0 0 10px 10px;
+  font-size: 0.95em;
 }
 </style>
 </head>
@@ -515,10 +602,13 @@ a:hover { text-decoration: underline; }
 
 <div class="article-container">
 
+<!-- ═══════════════════════════════════════════════════════════
+     HERO
+     ═══════════════════════════════════════════════════════════ -->
 <div class="hero">
   <h1>Convolutional Beta VAE from Scratch in JAX</h1>
-  <p class="subtitle">From Kingma & Welling's paper to generating faces: every gradient computed by hand</p>
-  <p class="meta">April 18, 2026 · Omojire · <a href="https://github.com/ojayballer/bvaex">View source on GitHub →</a></p>
+  <p class="subtitle">From Kingma & Welling's paper to generating faces, every gradient computed by hand</p>
+  <p class="meta">April 18, 2026 · Omojire · <a href="https://github.com/ojayballer/bvaex">GitHub</a> · <a href="https://x.com/ojbaby_11">𝕏</a></p>
   <div class="tag-row">
     <span class="tag vae">VAE</span>
     <span class="tag jax">JAX</span>
@@ -527,9 +617,13 @@ a:hover { text-decoration: underline; }
   </div>
 </div>
 
-<div class="toc">
-  <h3>Table of Contents</h3>
-  <ul>
+<!-- ═══════════════════════════════════════════════════════════
+     TABLE OF CONTENTS
+     ═══════════════════════════════════════════════════════════ -->
+<details>
+  <summary>Table of Contents</summary>
+  <div class="details-content">
+  <ul style="list-style:none; padding-left:0;">
     <li><span class="part-label">Part 1: Reading the Paper</span>
       <ul>
         <li><a href="#sec-1-1">1.1 What Even Is a VAE?</a></li>
@@ -564,8 +658,12 @@ a:hover { text-decoration: underline; }
       </ul>
     </li>
   </ul>
-</div>
+  </div>
+</details>
 
+<!-- ═══════════════════════════════════════════════════════════════
+     PART 1: READING THE PAPER
+     ═══════════════════════════════════════════════════════════════ -->
 <div class="part-header theory">Part 1: Reading the Paper</div>
 
 <h2 id="sec-1-1">1.1 What Even Is a VAE?</h2>
@@ -584,11 +682,13 @@ a:hover { text-decoration: underline; }
 
 <p>A variational auto-encoder is a model made up of the <span class="badge encoder">Encoder</span> (also called the recognition model) and the <span class="badge decoder">Decoder</span> (also called the generative model). The <span class="badge encoder">Encoder</span> outputs approximations to the posterior as latent variables to the <span class="badge decoder">Decoder</span>. These latent variables are the semantically compressed representation of the data. The <span class="badge decoder">Decoder</span> needs these latent variables to reconstruct the original data, and both the encoder and decoder update their weights through backpropagation, which is the foundation of why deep learning is even possible in the first place.</p>
 
-<div class="callout insight">
-  <strong>Quick definitions</strong>
-  <p><b>Posterior</b> is your belief about the data <em>after</em> seeing the data.</p>
-  <p><b>Prior</b> is your belief about the data <em>before</em> seeing the data.</p>
-</div>
+<details>
+  <summary>What is a Posterior and a Prior?</summary>
+  <div class="details-content">
+    <p><b>Posterior</b> is your belief about the data <em>after</em> seeing the data.</p>
+    <p><b>Prior</b> is your belief about the data <em>before</em> seeing the data.</p>
+  </div>
+</details>
 
 <p>The <span class="badge decoder">Decoder</span> is the one that kind of pushes the <span class="badge encoder">Encoder</span> to generate a better meaningful latent space that is capable of representing the true posterior. The decoder takes the latent space and sees if it can generate realistic outputs, if not, it tells the encoder to generate and encode better features into the latent space.</p>
 
@@ -806,25 +906,33 @@ $$\text{Loss} = -\mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)] + \beta \cdot D_{K
 
 <hr>
 
+<!-- ═══════════════════════════════════════════════════════════════
+     PART 2: THE IMPLEMENTATION
+     ═══════════════════════════════════════════════════════════════ -->
 <div class="part-header implementation">Part 2: The Implementation</div>
 
 <h2 id="sec-2-1">2.1 Encoder</h2>
 
-<p>I already defined what an encoder is, but to recap: an <span class="badge encoder">Encoder</span> in a variational auto-encoder is what takes the input features and compresses them into a more meaningful or semantic representation of the input. These semantic representations learn to remove noise from the input and focus on capturing the core features of that input. My encoder architecture consists of 3 stacked convolutional layers with <span class="badge jax">ReLU</span> activations that consistently downsample the image (64→32→16→8). I am pretty sure everyone knows what a convolutional layer is but for people who do not know, a conv layer takes inputs and extracts meaningful features from them like edges, eyes, nose while preserving the spatial structure of the image. It is usually in 3D form, unlike normal neural networks that flatten the image into 1D and lose all its spatial structure. The output of the last convolutional layer is then flattened and passed into two dense layers to form μ and log σ² (log σ² is used to compute σ in the reparameterization step).</p>
+<p>I already defined what an encoder is, but to recap: an <span class="badge encoder">Encoder</span> in a variational auto encoder is what takes the input features and compresses them into a more meaningful or semantic representation of the input. These semantic representations learn to remove noise from the input and focus on capturing the core features of that input. My encoder architecture consists of 3 stacked convolutional layers with <span class="badge jax">ReLU</span> activations that consistently downsample the image (64→32→16→8). I am pretty sure everyone knows what a convolutional layer is but for people who do not know, a conv layer takes inputs and extracts meaningful features from them like edges, eyes, nose while preserving the spatial structure of the image. It is usually in 3D form, unlike normal neural networks that flatten the image into 1D and lose all its spatial structure. The output of the last convolutional layer is then flattened and passed into two dense layers to form μ and log σ² (log σ² is used to compute σ in the reparameterization step).</p>
 
-<div class="arch-diagram">
-  <span class="shape">Input (3, 64, 64)</span><br>
-  <span class="arrow">&nbsp;&nbsp;→</span> <span class="layer">Conv2D</span>(3→32, kernel=4, stride=2, pad=1) → <span class="act">ReLU</span> → <span class="shape">(32, 32, 32)</span><br>
-  <span class="arrow">&nbsp;&nbsp;→</span> <span class="layer">Conv2D</span>(32→64, kernel=4, stride=2, pad=1) → <span class="act">ReLU</span> → <span class="shape">(64, 16, 16)</span><br>
-  <span class="arrow">&nbsp;&nbsp;→</span> <span class="layer">Conv2D</span>(64→128, kernel=4, stride=2, pad=1) → <span class="act">ReLU</span> → <span class="shape">(128, 8, 8)</span><br>
-  <span class="arrow">&nbsp;&nbsp;→</span> Flatten → <span class="shape">(8192,)</span><br>
-  <span class="arrow">&nbsp;&nbsp;→</span> <span class="layer">Dense</span>(8192→128) → <span class="param">μ</span><br>
-  <span class="arrow">&nbsp;&nbsp;→</span> <span class="layer">Dense</span>(8192→128) → <span class="param">log σ²</span>
+<div class="arch-visual">
+  <div class="arch-row"><span class="arch-box shape">Input (3, 64, 64)</span></div>
+  <div class="arch-row"><span class="arch-arrow">↓</span></div>
+  <div class="arch-row"><span class="arch-box conv">Conv2D</span><span class="arch-arrow">→</span><span class="arch-box act">ReLU</span><span class="arch-arrow">→</span><span class="arch-box shape">(32, 32, 32)</span></div>
+  <div class="arch-row"><span class="arch-arrow">↓</span></div>
+  <div class="arch-row"><span class="arch-box conv">Conv2D</span><span class="arch-arrow">→</span><span class="arch-box act">ReLU</span><span class="arch-arrow">→</span><span class="arch-box shape">(64, 16, 16)</span></div>
+  <div class="arch-row"><span class="arch-arrow">↓</span></div>
+  <div class="arch-row"><span class="arch-box conv">Conv2D</span><span class="arch-arrow">→</span><span class="arch-box act">ReLU</span><span class="arch-arrow">→</span><span class="arch-box shape">(128, 8, 8)</span></div>
+  <div class="arch-row"><span class="arch-arrow">↓</span></div>
+  <div class="arch-row"><span class="arch-box op">Flatten</span><span class="arch-arrow">→</span><span class="arch-box shape">(8192,)</span></div>
+  <div class="arch-row"><span class="arch-arrow">↓</span></div>
+  <div class="arch-row"><span class="arch-box dense">Dense(8192→128)</span><span class="arch-arrow">→</span><span class="arch-box param">μ</span></div>
+  <div class="arch-row"><span class="arch-box dense">Dense(8192→128)</span><span class="arch-arrow">→</span><span class="arch-box param">log σ²</span></div>
 </div>
 
 <p>The implementation of the <span class="badge encoder">Convolutional</span> layer I wrote from scratch. Every forward pass uses <span class="badge jax">jax.lax.conv_general_dilated</span> for GPU-accelerated computation. You can check the full implementation on <a href="https://github.com/ojayballer/bvaex">GitHub</a>.</p>
 
-<pre data-lang="python"><code><span class="kw">class</span> <span class="nn">Convolutional</span>:
+<pre><code><span class="kw">class</span> <span class="nn">Convolutional</span>:
     <span class="kw">def</span> <span class="fn">__init__</span>(<span class="sf">self</span>, input_shape, adam, kernel_size, depth, padding=<span class="nb">1</span>, stride=<span class="nb">2</span>, seed=<span class="nb">0</span>):
         input_depth, input_height, input_width = input_shape
         <span class="sf">self</span>.depth = depth
@@ -862,7 +970,7 @@ $$\text{Loss} = -\mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)] + \beta \cdot D_{K
 
 <p>This is the bridge between the <span class="badge encoder">Encoder</span> and <span class="badge decoder">Decoder</span>. I have explained this before but a fast recap: the encoder outputs μ and log σ², but we need an actual sample z to pass to the decoder. Sampling directly from $\mathcal{N}(\mu, \sigma^2)$ would break backpropagation, so we use the <span class="badge reparam">Reparameterization Trick</span>.</p>
 
-<pre data-lang="python"><code><span class="kw">class</span> <span class="nn">Reparameterize</span>:
+<pre><code><span class="kw">class</span> <span class="nn">Reparameterize</span>:
     <span class="kw">def</span> <span class="fn">forward</span>(<span class="sf">self</span>, key, mu, log_var):
         <span class="sf">self</span>.mu = mu
         <span class="sf">self</span>.log_var = log_var
@@ -872,7 +980,7 @@ $$\text{Loss} = -\mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)] + \beta \cdot D_{K
         <span class="kw">return</span> <span class="sf">self</span>.mu + <span class="sf">self</span>.sigma * <span class="sf">self</span>.epsilon  <span class="cm"># z</span>
 
     <span class="kw">def</span> <span class="fn">backward</span>(<span class="sf">self</span>, output_gradient):
-        total_mu_gradient = output_gradient                                        <span class="cm"># dL/dz * dz/dmu</span>
+        total_mu_gradient = output_gradient                                          <span class="cm"># dL/dz * dz/dmu</span>
         total_log_var_gradient = output_gradient * <span class="nb">0.5</span> * <span class="sf">self</span>.sigma * <span class="sf">self</span>.epsilon  <span class="cm"># dL/dz * dz/dlog_var</span>
         <span class="kw">return</span> total_mu_gradient, total_log_var_gradient</code></pre>
 
@@ -884,17 +992,21 @@ $$\text{Loss} = -\mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)] + \beta \cdot D_{K
 
 <p>The <span class="badge decoder">Decoder</span> takes the latent random variable z and reconstructs a 64×64 RGB image. It first passes z through a dense layer to expand it to shape (128, 8, 8). This is done because the current z is only 128 values, it does not have enough features to form the 3D input that the first transposed conv layer expects. The z is then reshaped and passed through 3 transposed convolutional layers that upsample: 8→16→32→64. Each transposed conv layer is followed by ReLU except the last layer which uses a sigmoid activation to output pixel values between 0 and 1.</p>
 
-<div class="arch-diagram">
-  <span class="shape">z (128,)</span><br>
-  <span class="arrow">&nbsp;&nbsp;→</span> <span class="layer">Dense</span>(128→8192) → Reshape → <span class="shape">(128, 8, 8)</span><br>
-  <span class="arrow">&nbsp;&nbsp;→</span> <span class="layer">TransposedConv2D</span>(128→64, kernel=4, stride=2, pad=1) → <span class="act">ReLU</span> → <span class="shape">(64, 16, 16)</span><br>
-  <span class="arrow">&nbsp;&nbsp;→</span> <span class="layer">TransposedConv2D</span>(64→32, kernel=4, stride=2, pad=1) → <span class="act">ReLU</span> → <span class="shape">(32, 32, 32)</span><br>
-  <span class="arrow">&nbsp;&nbsp;→</span> <span class="layer">TransposedConv2D</span>(32→3, kernel=4, stride=2, pad=1) → <span class="act">Sigmoid</span> → <span class="shape">(3, 64, 64)</span>
+<div class="arch-visual">
+  <div class="arch-row"><span class="arch-box param">z (128,)</span></div>
+  <div class="arch-row"><span class="arch-arrow">↓</span></div>
+  <div class="arch-row"><span class="arch-box dense">Dense(128→8192)</span><span class="arch-arrow">→</span><span class="arch-box op">Reshape</span><span class="arch-arrow">→</span><span class="arch-box shape">(128, 8, 8)</span></div>
+  <div class="arch-row"><span class="arch-arrow">↓</span></div>
+  <div class="arch-row"><span class="arch-box tconv">TransposedConv2D</span><span class="arch-arrow">→</span><span class="arch-box act">ReLU</span><span class="arch-arrow">→</span><span class="arch-box shape">(64, 16, 16)</span></div>
+  <div class="arch-row"><span class="arch-arrow">↓</span></div>
+  <div class="arch-row"><span class="arch-box tconv">TransposedConv2D</span><span class="arch-arrow">→</span><span class="arch-box act">ReLU</span><span class="arch-arrow">→</span><span class="arch-box shape">(32, 32, 32)</span></div>
+  <div class="arch-row"><span class="arch-arrow">↓</span></div>
+  <div class="arch-row"><span class="arch-box tconv">TransposedConv2D</span><span class="arch-arrow">→</span><span class="arch-box act">Sigmoid</span><span class="arch-arrow">→</span><span class="arch-box shape">(3, 64, 64)</span></div>
 </div>
 
-<p>The <span class="badge decoder">TransposedConv2D</span> was the hardest layer to implement from scratch. The forward pass flips the weights spatially and transposes the channel dimensions before doing a dilated convolution. The backward pass uses a regular convolution for the input gradient and a cross correlation with gradient unflips for the kernel gradient.</p>
+<p>The <span class="badge decoder">TransposedConv2D</span> was the hardest layer to implement from scratch. The forward pass flips the weights spatially and transposes the channel dimensions before doing a dilated convolution. The backward pass uses a regular convolution for the input gradient and a cross correlation with gradient un-flipping for the kernel gradient.</p>
 
-<pre data-lang="python"><code><span class="kw">class</span> <span class="nn">TransposedConv2D</span>:
+<pre><code><span class="kw">class</span> <span class="nn">TransposedConv2D</span>:
     <span class="kw">def</span> <span class="fn">__init__</span>(<span class="sf">self</span>, input_shape, depth, adam, kernel_size=<span class="nb">4</span>, padding=<span class="nb">1</span>, stride=<span class="nb">2</span>, seed=<span class="nb">1</span>):
         input_depth, input_height, input_width = input_shape
 
@@ -938,7 +1050,7 @@ $$\text{Loss} = -\mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)] + \beta \cdot D_{K
 
 <p>The reconstruction loss measures how well the decoder's output matches the original input. I used Mean Squared Error with sum over spatial dimensions and mean over batch:</p>
 
-<pre data-lang="python"><code><span class="kw">class</span> <span class="nn">ReconstructionLoss</span>:
+<pre><code><span class="kw">class</span> <span class="nn">ReconstructionLoss</span>:
     <span class="kw">def</span> <span class="fn">forward</span>(<span class="sf">self</span>, y_pred, y_true):
         <span class="sf">self</span>.y_pred = y_pred
         <span class="sf">self</span>.y_true = y_true
@@ -949,7 +1061,7 @@ $$\text{Loss} = -\mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)] + \beta \cdot D_{K
 
 <p>The KL divergence measures how close the encoder's output distribution is to the prior N(0, I). This uses the closed form formula for KL between two Gaussians:</p>
 
-<pre data-lang="python"><code><span class="kw">class</span> <span class="nn">KullBackLeiblerDivergenceLoss</span>:
+<pre><code><span class="kw">class</span> <span class="nn">KullBackLeiblerDivergenceLoss</span>:
     <span class="kw">def</span> <span class="fn">forward</span>(<span class="sf">self</span>, mu, log_var):
         <span class="sf">self</span>.mu = mu
         <span class="sf">self</span>.log_var = jnp.clip(log_var, -<span class="nb">10</span>, <span class="nb">10</span>)
@@ -975,7 +1087,7 @@ $$\text{Loss} = \text{Reconstruction Loss} + \beta \cdot D_{KL}\big(q_\phi(z|x) 
 
 <p>But even Adam was not enough. Over 100 epochs of training, the weights grew and this caused the activations to explode through the decoder layers. So I added decoupled weight decay, which makes it AdamW. One line of code made the difference:</p>
 
-<pre data-lang="python"><code><span class="kw">class</span> <span class="nn">AdamW</span>:
+<pre><code><span class="kw">class</span> <span class="nn">AdamW</span>:
     <span class="kw">def</span> <span class="fn">__init__</span>(<span class="sf">self</span>):
         <span class="sf">self</span>.alpha = <span class="nb">0.001</span>
         <span class="sf">self</span>.B1 = <span class="nb">0.9</span>
@@ -990,7 +1102,7 @@ $$\text{Loss} = \text{Reconstruction Loss} + \beta \cdot D_{KL}\big(q_\phi(z|x) 
             <span class="sf">self</span>.m[name] = jnp.zeros_like(weight)
             <span class="sf">self</span>.v[name] = jnp.zeros_like(weight)
 
-        <span class="cm"># Weight decay : this one line prevents activation explosion</span>
+        <span class="cm"># Weight decay. this one line prevents activation explosion</span>
         weight = weight * (<span class="nb">1.0</span> - <span class="sf">self</span>.alpha * <span class="nb">0.01</span>)
 
         <span class="sf">self</span>.m[name] = <span class="sf">self</span>.B1 * <span class="sf">self</span>.m[name] + (<span class="nb">1</span> - <span class="sf">self</span>.B1) * gradient
@@ -1016,7 +1128,7 @@ $$\text{Loss} = \text{Reconstruction Loss} + \beta \cdot D_{KL}\big(q_\phi(z|x) 
 
 <p>The <span class="badge jax">model.py</span> connects everything into one pipeline. The forward pass goes: <span class="badge encoder">Encoder</span> → <span class="badge reparam">Reparameterize</span> → <span class="badge decoder">Decoder</span> → compute loss. The backward pass goes in reverse: loss gradients → decoder → reparameterize → encoder. Both the encoder and decoder weights are updated simultaneously through backpropagation.</p>
 
-<pre data-lang="python"><code><span class="kw">class</span> <span class="nn">CONVAE</span>:
+<pre><code><span class="kw">class</span> <span class="nn">CONVAE</span>:
     <span class="kw">def</span> <span class="fn">__init__</span>(<span class="sf">self</span>, input, input_shape, kernel_size, encoder_filters, decoder_filters, latent_dim):
         <span class="sf">self</span>.adam = Adam()
         <span class="sf">self</span>.encoder = Encoder(encoder_filters, input, kernel_size, latent_dim, <span class="sf">self</span>.adam)
@@ -1048,6 +1160,9 @@ $$\text{Loss} = \text{Reconstruction Loss} + \beta \cdot D_{KL}\big(q_\phi(z|x) 
 
 <hr>
 
+<!-- ═══════════════════════════════════════════════════════════════
+     PART 3: EVERYTHING THAT BROKE
+     ═══════════════════════════════════════════════════════════════ -->
 <div class="part-header bugs">Part 3: Everything That Broke</div>
 
 <p>Now this is the part where I talk about everything that went wrong and how I fixed it. Building a VAE from scratch sounds cool but it is by no means a small feat, until you are staring at red and black faces at 3am and crashing out wondering what is going on with my training. And you think what am I getting wrong? I was able to scale through and here were my errors and how I fixed them.</p>
@@ -1067,7 +1182,7 @@ $$\text{Loss} = \text{Reconstruction Loss} + \beta \cdot D_{KL}\big(q_\phi(z|x) 
 
 <h2 id="sec-3-2">3.2 Posterior Collapse</h2>
 
-<p>Early in training the KL loss would just collapse to zero within the first few batches. The <span class="badge encoder">Encoder</span> learned to completely ignore the input and just output the prior N(0, I) for everything. Every image got the same μ and σ regardless of what face it was looking at. The decoder had nothing useful to work with so reconstruction also got worse.</p>
+<p>Early in training the <span class="badge loss">KL loss</span> would just collapse to zero within the first few batches. The <span class="badge encoder">Encoder</span> learned to completely ignore the input and just output the prior N(0, I) for everything. Every image got the same μ and σ regardless of what face it was looking at. The decoder had nothing useful to work with so reconstruction also got worse.</p>
 
 <p>This happened because the KL loss was too easy to minimise. The encoder found that the fastest way to reduce the total loss was to just match the prior perfectly. This seems like an advantage but it is actually not. If KL = 0, the encoder will not encode meaningful features in the latent space and then this makes the decoder unable to predict the correct reconstructions.</p>
 
@@ -1077,12 +1192,12 @@ $$\text{Loss} = \text{Reconstruction Loss} + \beta \cdot D_{KL}\big(q_\phi(z|x) 
 
 <h2 id="sec-3-3">3.3 Channel Collapse and Activation Explosion</h2>
 
-<p>Two problems were happening at the same time. First, all my layers were initialised with the same random seed, so every layer started with identical weights. Combined with ReLU, the red channel dominated and green and blue died. Channel stats showed <strong>R=0.69, G=0.01, B=0.003</strong>.</p>
+<p>Two problems were happening at the same time. First, all my layers were initialised with the same random seed, so every layer started with identical weights. Combined with <span class="badge jax">ReLU</span>, the red channel dominated and green and blue died. Channel stats showed <strong>R=0.69, G=0.01, B=0.003</strong>.</p>
 
-<p>Second, even the red channel was not producing real colors. The weights had grown way beyond their initial values over training, and the activations were exploding through each decoder layer. By the time values reached sigmoid they were in the millions, so sigmoid just snapped everything to 0 or 1. There were no real skin tones, just binary red and black.</p>
+<p>Second, even the red channel was not producing real colors. The weights had grown way beyond their initial values over training, and the activations were exploding through each decoder layer. By the time values reached <span class="badge jax">Sigmoid</span> they were in the millions, so sigmoid just snapped everything to 0 or 1. There were no real skin tones, just binary red and black.</p>
 
 <div class="img-block">
-  <img src="assets/img/convvae/channel_collapse.png" alt="Channel collapse: red and black faces">
+  <img src="assets/img/convvae/channel_collapse.png" alt="Channel collapse. red and black faces">
   <div class="caption">What my VAE was producing: red and black faces with dead green and blue channels</div>
 </div>
 
@@ -1092,7 +1207,7 @@ $$\text{Loss} = \text{Reconstruction Loss} + \beta \cdot D_{KL}\big(q_\phi(z|x) 
 </div>
 
 <div class="img-block">
-  <img src="assets/img/convvae/early_training.png" alt="Early training: blurry but alive">
+  <img src="assets/img/convvae/early_training.png" alt="Early training. blurry but alive">
   <div class="caption">After the fix: blurry but all three channels alive and learning</div>
 </div>
 
@@ -1102,12 +1217,15 @@ $$\text{Loss} = \text{Reconstruction Loss} + \beta \cdot D_{KL}\big(q_\phi(z|x) 
 
 <p>My early reconstructions had a visible grid pattern on top of the faces. The face shapes were there but it looked like someone put a mesh over the image.</p>
 
-<p>This is a known problem with transposed convolution. When you use kernel_size=3 with stride=2, the kernel does not divide evenly by the stride. Some pixels get painted more than others creating an alternating bright and dark pattern across the whole image.</p>
+<p>This is a known problem with <span class="badge decoder">TransposedConv2D</span>. When you use kernel_size=3 with stride=2, the kernel does not divide evenly by the stride. Some pixels get painted more than others creating an alternating bright and dark pattern across the whole image.</p>
 
 <p>The fix was switching to <strong>kernel_size=4</strong> with stride=2 and padding=1. Even kernel size divides evenly by the stride so every pixel gets equal treatment. But this required rewriting the entire <span class="badge decoder">TransposedConv2D</span> backward pass because the gradient math changes completely with different kernel sizes. The final formulation flips the weights in the forward pass and also un-flips the gradients in the backward pass.</p>
 
 <hr>
 
+<!-- ═══════════════════════════════════════════════════════════════
+     PART 4: RESULTS
+     ═══════════════════════════════════════════════════════════════ -->
 <div class="part-header results">Part 4: Results</div>
 
 <h2 id="sec-4-1">4.1 What the Model Produces</h2>
@@ -1129,10 +1247,10 @@ $$\text{Loss} = \text{Reconstruction Loss} + \beta \cdot D_{KL}\big(q_\phi(z|x) 
 
 <div class="img-block">
   <img src="assets/img/convvae/generated_faces.png" alt="Generated Faces">
-  <div class="caption">Faces generated by sampling z ~ N(0, I): none of these exist in the training set</div>
+  <div class="caption">Faces generated by sampling z ~ N(0, I). none of these exist in the training set</div>
 </div>
 
-<p>These faces do not exist in the training set. I sampled random vectors from a standard Gaussian $z \sim \mathcal{N}(0, I)$ and passed them through the decoder. The fact that these look like plausible human faces means the latent space is well-structured. Random points in that space map to realistic outputs, not noise.</p>
+<p>These faces do not exist in the training set. I sampled random vectors from a standard Gaussian <span class="badge reparam">z</span> $z \sim \mathcal{N}(0, I)$ and passed them through the decoder. The fact that these look like plausible human faces means the latent space is well-structured. Random points in that space map to realistic outputs, not noise.</p>
 
 <h3>Latent Interpolation</h3>
 
@@ -1172,34 +1290,37 @@ $$\text{Loss} = \text{Reconstruction Loss} + \beta \cdot D_{KL}\big(q_\phi(z|x) 
   </tbody>
 </table>
 
-<p>The SSIM above 0.93 means the reconstructions are structurally very close to the originals. The channel balance sitting near 0.5 for all three channels confirms the channel collapse from Part 3 is fully resolved. The metrics are pretty solid for a from-scratch model, the changes/improvements in the next section would push them even further.</p>
+<p>The SSIM above 0.93 means the reconstructions are structurally very close to the originals. The channel balance sitting near 0.5 for all three channels confirms the channel collapse from Part 3 is fully resolved. The metrics are pretty solid for a from scratch model, the changes/improvements in the next section would push them even further.</p>
 
 <hr>
 
 <h2 id="sec-4-2">4.2 What I'd Do Differently</h2>
 
-<p>This model works, but it is not state-of-the-art. A few things that would push it further.</p>
+<p>This model works, but it is not state of the art. A few things that would push it further.</p>
 
-<p><strong>Batch Normalization.</strong> I did not implement batch norm from scratch because I would have had to rewrite my entire backward pass to accommodate it. But adding it would stabilise training and let me use higher learning rates.</p>
+<p><strong><span class="badge encoder">Batch Normalization</span></strong> I did not implement batch norm from scratch because I would have had to rewrite my entire backward pass to accommodate it. But adding it would stabilise training and let me use higher learning rates.</p>
 
-<p><strong>Perceptual Loss.</strong> MSE treats every pixel equally, which is why VAE outputs tend to look blurry. MSE averages over uncertainty instead of committing to sharp details. A perceptual loss using features from a pretrained network would push the model to preserve high-level structure like edges and textures instead of just minimising pixel distance.</p>
+<p><strong><span class="badge loss">Perceptual Loss</span></strong> MSE treats every pixel equally, which is why VAE outputs tend to look blurry. MSE averages over uncertainty instead of committing to sharp details. A perceptual loss using features from a pretrained network would push the model to preserve high-level structure like edges and textures instead of just minimising pixel distance.</p>
 
-<p><strong>Deeper Architecture.</strong> Three conv layers is minimal. More layers with residual connections would let the encoder capture finer details before compressing to 128 dimensions.</p>
+<p><strong><span class="badge decoder">Deeper Architecture</span></strong> Three conv layers is minimal. More layers with residual connections would let the encoder capture finer details before compressing to 128 dimensions.</p>
 
-<p><strong>Larger Latent Dimension.</strong> 128 works, but experimenting with 256 or 512 might capture more variation in the data, especially for diverse attributes like accessories, expressions, and lighting.</p>
+<p><strong><span class="badge reparam">Larger Latent Dimension</span></strong> 128 works, but experimenting with 256 or 512 might capture more variation in the data, especially for diverse attributes like accessories, expressions, and lighting.</p>
 
 <hr>
 
 <h2 id="sec-4-3">4.3 Final Thoughts</h2>
 
-<p>Welldone if you made it this far. We just built a convolutional beta variational auto-encoder from total scratch without any hidden abstractions. We went into the theory of the ELBO, the derivations, the intuitions, we stripped the whole paper down. I hope this was worth a read.</p>
+<p>Welldone if you made it this far. We just built a convolutional beta variational autoencoder from total scratch without any hidden abstractions. We went into the theory of the ELBO, the derivations, the intuitions, we stripped the whole paper down. I hope this was worth a read.</p>
 
-<p>This VAE architecture and the pure JAX engine I built for it is being adapted for anomaly detection on CERN high energy physics collision data. The idea is to train the VAE on normal collision events, learn what normal looks like in the latent space, and then flag any event that the model cannot reconstruct well as a potential anomaly. Same foundation, different data, real scientific application.</p>
+<p>This VAE architecture and the pure JAX engine I built for it is being adapted for anomaly detection on <span class="badge jax">CERN</span> high energy physics collision data. The idea is to train the VAE on normal collision events, learn what normal looks like in the latent space, and then flag any event that the model cannot reconstruct well as a potential anomaly. Same foundation, different data, real scientific application.</p>
 
-<p>I also plan to build a Vision Transformer next in JAX with Flax. Self-attention, multi-head attention, patch embeddings. The ConvVAE proved I understand what happens under the abstractions. Now I can use them.</p>
+<p>I also plan to build a <span class="badge jax">Vision Transformer</span> next in JAX with Flax. Self-attention, multi-head attention, patch embeddings. The ConvVAE proved I understand what happens under the abstractions. Now I can use them.</p>
 
 <p>I will be doing more blogs like this for anything I implement. See you in the next one!</p>
 
+<!-- ═══════════════════════════════════════════════════════════════
+     REFERENCES
+     ═══════════════════════════════════════════════════════════════ -->
 <div class="references">
   <h3>References</h3>
   <ol>
@@ -1214,5 +1335,6 @@ $$\text{Loss} = \text{Reconstruction Loss} + \beta \cdot D_{KL}\big(q_\phi(z|x) 
   <a href="https://github.com/ojayballer/bvaex">View the full source code on GitHub →</a>
 </div>
 
-</div></body>
+</div><!-- /article-container -->
+</body>
 </html>
