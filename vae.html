@@ -1,0 +1,1242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Convolutional Beta VAE from Scratch in JAX</title>
+
+<!-- Fonts -->
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600;8..60,700&family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<!-- MathJax -->
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], tags: 'ams' },
+  svg: { fontCache: 'global' }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js"></script>
+
+<style>
+/* ══════════════════════════════════════════════════════════════════
+   ROOT & RESET
+   ══════════════════════════════════════════════════════════════════ */
+:root {
+  --bg: #faf8f4;
+  --bg-warm: #f5f0e8;
+  --text: #2c2c2c;
+  --text-muted: #6b6b6b;
+  --text-light: #9a9a9a;
+  --accent-red: #d64045;
+  --accent-orange: #e8763a;
+  --accent-green: #2d9e6e;
+  --accent-blue: #3178c6;
+  --accent-purple: #7c5cbf;
+  --accent-gold: #c59a2e;
+  --border: #e0dbd2;
+  --code-bg: #1e1e2e;
+  --code-text: #cdd6f4;
+  --code-keyword: #cba6f7;
+  --code-string: #a6e3a1;
+  --code-function: #89b4fa;
+  --code-comment: #6c7086;
+  --code-number: #fab387;
+  --callout-bg: rgba(49, 120, 198, 0.06);
+  --callout-border: #3178c6;
+  --warning-bg: rgba(214, 64, 69, 0.06);
+  --warning-border: #d64045;
+  --success-bg: rgba(45, 158, 110, 0.06);
+  --success-border: #2d9e6e;
+  --insight-bg: rgba(124, 92, 191, 0.06);
+  --insight-border: #7c5cbf;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Source Serif 4', Georgia, serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 18px;
+  line-height: 1.75;
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   LAYOUT
+   ══════════════════════════════════════════════════════════════════ */
+.article-container {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   HERO / HEADER
+   ══════════════════════════════════════════════════════════════════ */
+.hero {
+  text-align: center;
+  padding: 60px 0 40px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 48px;
+}
+.hero h1 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 2.6em;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--text);
+  margin-bottom: 14px;
+  letter-spacing: -0.02em;
+}
+.hero .subtitle {
+  font-size: 1.1em;
+  color: var(--text-muted);
+  font-weight: 300;
+  margin-bottom: 16px;
+}
+.hero .meta {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85em;
+  color: var(--text-light);
+  letter-spacing: 0.04em;
+}
+.hero .meta a {
+  color: var(--accent-blue);
+  text-decoration: none;
+}
+.hero .meta a:hover { text-decoration: underline; }
+
+.tag-row {
+  display: flex;
+  gap: 8px;
+  justify-content: center;
+  flex-wrap: wrap;
+  margin-top: 18px;
+}
+.tag {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.72em;
+  font-weight: 600;
+  padding: 4px 12px;
+  border-radius: 20px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+.tag.jax { background: rgba(241, 196, 15, 0.15); color: #b8860b; }
+.tag.vae { background: rgba(214, 64, 69, 0.12); color: var(--accent-red); }
+.tag.scratch { background: rgba(45, 158, 110, 0.12); color: var(--accent-green); }
+.tag.celeba { background: rgba(124, 92, 191, 0.12); color: var(--accent-purple); }
+
+/* ══════════════════════════════════════════════════════════════════
+   TABLE OF CONTENTS
+   ══════════════════════════════════════════════════════════════════ */
+.toc {
+  background: var(--bg-warm);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 28px 32px;
+  margin-bottom: 48px;
+}
+.toc h3 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 16px;
+}
+.toc ul {
+  list-style: none;
+}
+.toc > ul > li {
+  margin-bottom: 6px;
+}
+.toc ul ul {
+  margin-left: 20px;
+  margin-top: 4px;
+}
+.toc a {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.92em;
+  color: var(--text);
+  text-decoration: none;
+  transition: color 0.2s;
+}
+.toc a:hover { color: var(--accent-blue); }
+.toc .part-label {
+  font-weight: 700;
+  font-size: 0.95em;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   PART HEADERS
+   ══════════════════════════════════════════════════════════════════ */
+.part-header {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1.5em;
+  font-weight: 700;
+  padding: 18px 28px;
+  border-radius: 10px;
+  color: #fff;
+  margin: 56px 0 32px;
+  letter-spacing: -0.01em;
+  position: relative;
+  overflow: hidden;
+}
+.part-header::after {
+  content: '';
+  position: absolute;
+  top: 0; right: 0; bottom: 0;
+  width: 40%;
+  background: linear-gradient(90deg, transparent, rgba(255,255,255,0.08));
+}
+.part-header.theory { background: linear-gradient(135deg, #2c3e50, #3178c6); }
+.part-header.implementation { background: linear-gradient(135deg, #1a5632, #2d9e6e); }
+.part-header.bugs { background: linear-gradient(135deg, #8b1a1a, #d64045); }
+.part-header.results { background: linear-gradient(135deg, #5b3a8c, #7c5cbf); }
+
+/* ══════════════════════════════════════════════════════════════════
+   SECTION HEADINGS
+   ══════════════════════════════════════════════════════════════════ */
+h2 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1.55em;
+  font-weight: 700;
+  color: var(--text);
+  margin: 48px 0 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--border);
+  letter-spacing: -0.01em;
+}
+h3 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1.15em;
+  font-weight: 600;
+  color: var(--text);
+  margin: 32px 0 14px;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   INLINE BADGES
+   ══════════════════════════════════════════════════════════════════ */
+.badge {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82em;
+  font-weight: 600;
+  padding: 3px 9px;
+  border-radius: 5px;
+  white-space: nowrap;
+}
+.badge.encoder { background: rgba(214, 64, 69, 0.12); color: var(--accent-red); }
+.badge.decoder { background: rgba(232, 118, 58, 0.12); color: var(--accent-orange); }
+.badge.loss    { background: rgba(45, 158, 110, 0.12); color: var(--accent-green); }
+.badge.reparam { background: rgba(124, 92, 191, 0.12); color: var(--accent-purple); }
+.badge.adam    { background: rgba(49, 120, 198, 0.12); color: var(--accent-blue); }
+.badge.jax     { background: rgba(197, 154, 46, 0.12); color: var(--accent-gold); }
+
+/* ══════════════════════════════════════════════════════════════════
+   CODE BLOCKS
+   ══════════════════════════════════════════════════════════════════ */
+pre {
+  background: var(--code-bg);
+  border-radius: 12px;
+  padding: 24px 28px;
+  overflow-x: auto;
+  margin: 24px 0;
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  position: relative;
+}
+pre::before {
+  content: attr(data-lang);
+  position: absolute;
+  top: 10px;
+  right: 16px;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.7em;
+  font-weight: 600;
+  color: rgba(255,255,255,0.25);
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+pre code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.82em;
+  line-height: 1.7;
+  color: var(--code-text);
+}
+
+/* Syntax highlighting classes */
+.kw { color: #cba6f7; }  /* keywords */
+.fn { color: #89b4fa; }  /* functions */
+.st { color: #a6e3a1; }  /* strings */
+.cm { color: #6c7086; font-style: italic; }  /* comments */
+.nb { color: #fab387; }  /* numbers/builtins */
+.op { color: #89dceb; }  /* operators */
+.sf { color: #f9e2af; }  /* self */
+.nn { color: #f5c2e7; }  /* class names */
+
+/* Inline code */
+code:not(pre code) {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85em;
+  background: rgba(49, 120, 198, 0.08);
+  color: var(--accent-blue);
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   CALLOUT BOXES
+   ══════════════════════════════════════════════════════════════════ */
+.callout {
+  border-radius: 10px;
+  padding: 20px 24px;
+  margin: 24px 0;
+  border-left: 4px solid;
+  font-size: 0.95em;
+}
+.callout.info {
+  background: var(--callout-bg);
+  border-color: var(--callout-border);
+}
+.callout.warning {
+  background: var(--warning-bg);
+  border-color: var(--warning-border);
+}
+.callout.success {
+  background: var(--success-bg);
+  border-color: var(--success-border);
+}
+.callout.insight {
+  background: var(--insight-bg);
+  border-color: var(--insight-border);
+}
+.callout strong {
+  display: block;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.9em;
+  font-weight: 700;
+  margin-bottom: 8px;
+  letter-spacing: 0.02em;
+}
+.callout.info strong { color: var(--accent-blue); }
+.callout.warning strong { color: var(--accent-red); }
+.callout.success strong { color: var(--accent-green); }
+.callout.insight strong { color: var(--accent-purple); }
+
+/* ══════════════════════════════════════════════════════════════════
+   ARCHITECTURE DIAGRAMS
+   ══════════════════════════════════════════════════════════════════ */
+.arch-diagram {
+  background: var(--code-bg);
+  border-radius: 12px;
+  padding: 24px 28px;
+  margin: 24px 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.8em;
+  line-height: 2;
+  color: var(--code-text);
+  border: 1px solid rgba(255,255,255,0.06);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  overflow-x: auto;
+}
+.arch-diagram .layer { color: #89b4fa; font-weight: 600; }
+.arch-diagram .shape { color: #a6e3a1; }
+.arch-diagram .act { color: #f9e2af; }
+.arch-diagram .arrow { color: #6c7086; }
+.arch-diagram .param { color: #cba6f7; font-weight: 600; }
+
+/* ══════════════════════════════════════════════════════════════════
+   IMAGES
+   ══════════════════════════════════════════════════════════════════ */
+.img-block {
+  margin: 32px 0;
+  text-align: center;
+}
+.img-block img {
+  max-width: 100%;
+  border-radius: 10px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+  border: 1px solid var(--border);
+}
+.img-block .caption {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85em;
+  color: var(--text-muted);
+  margin-top: 12px;
+  font-style: italic;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   METRICS TABLE
+   ══════════════════════════════════════════════════════════════════ */
+.metrics-table {
+  width: 100%;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: 12px;
+  overflow: hidden;
+  margin: 24px 0;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.06);
+  border: 1px solid var(--border);
+}
+.metrics-table thead th {
+  background: linear-gradient(135deg, #2c3e50, #34495e);
+  color: #fff;
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85em;
+  font-weight: 600;
+  padding: 14px 20px;
+  text-align: left;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+.metrics-table td {
+  padding: 13px 20px;
+  border-bottom: 1px solid var(--border);
+  font-size: 0.95em;
+}
+.metrics-table tr:last-child td { border-bottom: none; }
+.metrics-table tr:nth-child(even) td { background: rgba(49, 120, 198, 0.03); }
+.metrics-table td:last-child { font-weight: 600; }
+
+/* ══════════════════════════════════════════════════════════════════
+   SUMMARY BOX
+   ══════════════════════════════════════════════════════════════════ */
+.summary-box {
+  background: var(--bg-warm);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px 28px;
+  margin: 28px 0;
+}
+.summary-box h4 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.88em;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  margin-bottom: 14px;
+}
+.summary-box p { margin-bottom: 10px; }
+.summary-box p:last-child { margin-bottom: 0; }
+
+/* ══════════════════════════════════════════════════════════════════
+   MATH (MathJax)
+   ══════════════════════════════════════════════════════════════════ */
+.MathJax { font-size: 1em !important; }
+.math-block {
+  margin: 28px 0;
+  padding: 20px;
+  background: rgba(49, 120, 198, 0.03);
+  border-radius: 10px;
+  border: 1px solid rgba(49, 120, 198, 0.08);
+  overflow-x: auto;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   HR / DIVIDERS
+   ══════════════════════════════════════════════════════════════════ */
+hr {
+  border: none;
+  height: 1px;
+  background: var(--border);
+  margin: 48px 0;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   LINKS
+   ══════════════════════════════════════════════════════════════════ */
+a { color: var(--accent-blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ══════════════════════════════════════════════════════════════════
+   REFERENCES
+   ══════════════════════════════════════════════════════════════════ */
+.references {
+  background: var(--bg-warm);
+  border-radius: 12px;
+  padding: 28px 32px;
+  margin: 48px 0 0;
+  border: 1px solid var(--border);
+}
+.references h3 {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+.references ol {
+  padding-left: 20px;
+  font-size: 0.9em;
+  line-height: 1.8;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   FOOTER
+   ══════════════════════════════════════════════════════════════════ */
+.footer-bar {
+  text-align: center;
+  padding: 32px 0;
+  margin-top: 48px;
+  border-top: 1px solid var(--border);
+}
+.footer-bar a {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 1em;
+  color: var(--accent-blue);
+  text-decoration: none;
+  padding: 12px 28px;
+  border: 2px solid var(--accent-blue);
+  border-radius: 8px;
+  transition: all 0.2s;
+}
+.footer-bar a:hover {
+  background: var(--accent-blue);
+  color: #fff;
+  text-decoration: none;
+}
+
+/* ══════════════════════════════════════════════════════════════════
+   RESPONSIVE
+   ══════════════════════════════════════════════════════════════════ */
+@media (max-width: 600px) {
+  .hero h1 { font-size: 1.8em; }
+  .part-header { font-size: 1.2em; padding: 14px 20px; }
+  pre { padding: 16px 18px; }
+  .arch-diagram { padding: 16px 18px; font-size: 0.72em; }
+  .article-container { padding: 20px 16px 60px; }
+}
+</style>
+</head>
+<body>
+
+<div class="article-container">
+
+<!-- ═══════════════════════════════════════════════════════════
+     HERO
+     ═══════════════════════════════════════════════════════════ -->
+<div class="hero">
+  <h1>Convolutional Beta VAE from Scratch in JAX</h1>
+  <p class="subtitle">From Kingma & Welling's paper to generating faces — every gradient computed by hand</p>
+  <p class="meta">April 18, 2026 · Omojire · <a href="https://github.com/ojayballer/bvaex">View source on GitHub →</a></p>
+  <div class="tag-row">
+    <span class="tag vae">VAE</span>
+    <span class="tag jax">JAX</span>
+    <span class="tag scratch">From Scratch</span>
+    <span class="tag celeba">CelebA</span>
+  </div>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════
+     TABLE OF CONTENTS
+     ═══════════════════════════════════════════════════════════ -->
+<div class="toc">
+  <h3>Table of Contents</h3>
+  <ul>
+    <li><span class="part-label">Part 1: Reading the Paper</span>
+      <ul>
+        <li><a href="#sec-1-1">1.1 What Even Is a VAE?</a></li>
+        <li><a href="#sec-1-2">1.2 What Was Wrong Before VAEs?</a></li>
+        <li><a href="#sec-1-3">1.3 The Intractability Problem</a></li>
+        <li><a href="#sec-1-4">1.4 Deriving the ELBO</a></li>
+      </ul>
+    </li>
+    <li><span class="part-label">Part 2: The Implementation</span>
+      <ul>
+        <li><a href="#sec-2-1">2.1 Encoder</a></li>
+        <li><a href="#sec-2-2">2.2 Reparameterization Trick</a></li>
+        <li><a href="#sec-2-3">2.3 Decoder</a></li>
+        <li><a href="#sec-2-4">2.4 ELBO Loss</a></li>
+        <li><a href="#sec-2-5">2.5 AdamW Optimizer</a></li>
+        <li><a href="#sec-2-6">2.6 Tying It Together</a></li>
+      </ul>
+    </li>
+    <li><span class="part-label">Part 3: Everything That Broke</span>
+      <ul>
+        <li><a href="#sec-3-1">3.1 Gradient Scale Mismatch</a></li>
+        <li><a href="#sec-3-2">3.2 Posterior Collapse</a></li>
+        <li><a href="#sec-3-3">3.3 Channel Collapse and Activation Explosion</a></li>
+        <li><a href="#sec-3-4">3.4 Checkerboard Artifacts</a></li>
+      </ul>
+    </li>
+    <li><span class="part-label">Part 4: Results</span>
+      <ul>
+        <li><a href="#sec-4-1">4.1 What the Model Produces</a></li>
+        <li><a href="#sec-4-2">4.2 What I'd Do Differently</a></li>
+        <li><a href="#sec-4-3">4.3 Final Thoughts</a></li>
+      </ul>
+    </li>
+  </ul>
+</div>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PART 1: READING THE PAPER
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="part-header theory">Part 1: Reading the Paper</div>
+
+<h2 id="sec-1-1">1.1 What Even Is a VAE?</h2>
+
+<p>A Variational Autoencoder learns to compress data into a structured latent space and use that space to generate new data. That is the whole idea. Everything else in this blog is about how and why that works.</p>
+
+<p>VAEs take the useful parts of data, kind of like downsampling or regularizing it in a way that the compressed version can be used to generate new data while preserving the meaningful parts. So basically, what I am trying to say is that the VAE compresses data into a latent space and then that latent space is used to make new meaningful predictions.</p>
+
+<p>VAEs are generative models at their core, but they can also be applied to discriminative tasks. A discriminative model is one trained to learn the true labels, i.e if an image is a cat or if a rose flower is actually the rose label class. A generative model has the aim of generating new data.</p>
+
+<p>The generative side of VAEs tends to make stronger assumptions on data, it is often wrong to an extent. Generative models are better employed if there are few labels and many unlabelled data, this is a form of semi-supervised learning.</p>
+
+<p>Training the generative model is like an auxiliary task. An auxiliary task in ML is a task that focuses on the secondary objectives rather than the primary task, this improves performance. In this case the auxiliary task is to focus and improve on the generative part of the variational auto-encoder.</p>
+
+<p>The auxiliary task gives a way to understand the data at an abstract level, hence making the model generalise to making target (downstream) predictions.</p>
+
+<p>A variational auto-encoder is a model made up of the <span class="badge encoder">Encoder</span> (also called the recognition model) and the <span class="badge decoder">Decoder</span> (also called the generative model). The <span class="badge encoder">Encoder</span> outputs approximations to the posterior as latent variables to the <span class="badge decoder">Decoder</span>. These latent variables are the semantically compressed representation of the data. The <span class="badge decoder">Decoder</span> needs these latent variables to reconstruct the original data, and both the encoder and decoder update their weights through backpropagation, which is the foundation of why deep learning is even possible in the first place.</p>
+
+<div class="callout insight">
+  <strong>Quick definitions</strong>
+  <p><b>Posterior</b> is your belief about the data <em>after</em> seeing the data.</p>
+  <p><b>Prior</b> is your belief about the data <em>before</em> seeing the data.</p>
+</div>
+
+<p>The <span class="badge decoder">Decoder</span> is the one that kind of pushes the <span class="badge encoder">Encoder</span> to generate a better meaningful latent space that is capable of representing the true posterior. The decoder takes the latent space and sees if it can generate realistic outputs, if not, it tells the encoder to generate and encode better features into the latent space.</p>
+
+<div class="img-block">
+  <img src="assets/img/convvae/vae_architecture.png" alt="VAE Architecture Diagram">
+  <div class="caption">Encoder compresses input into latent space, Decoder reconstructs from it</div>
+</div>
+
+<p>This makes very good sense given the fact that the generative model (decoder) is the exact inverse of the recognition model (encoder) according to Bayes' rule.</p>
+
+<div class="math-block">
+$$p_\theta(z|x) = \frac{p_\theta(x|z) \, p_\theta(z)}{p_\theta(x)}$$
+</div>
+
+<p>We are going deeper, good job if you made it this far into the blog, it is only going to get interesting from here, I promise, hands crossed.</p>
+
+<hr>
+
+<h2 id="sec-1-2">1.2 What Was Wrong Before VAEs?</h2>
+
+<p>Before VAEs, there was a framework called ordinary Variational Inference (VI). VI is a probabilistic method for approximating intractable posterior distributions, but it had a very big disadvantage: each data point in the dataset had to be optimized separately to get the variational distribution for that point, and this was very inefficient for large datasets. What I mean is, if there are 1 million data points in your dataset, you have to run a separate optimization loop on each point to get the variational distribution for each of them. This was extremely inefficient.</p>
+
+<p>VAEs solve this by making the <span class="badge encoder">Encoder</span> (recognition model) a stochastic function of the input variables. This means the encoder would generate different latent variables for different data points, it might even generate slightly different latent variables for the same point each time. This is known as <strong>"amortized inference"</strong>. The encoder uses one set of parameters to generate the latent variables for all inputs, but in normal VIs each datapoint had its own separate set of parameters.</p>
+
+<p>But there is one big issue. Since the network is stochastic (random), a variable <strong>z</strong> has to be sampled from the latent distribution to test the decoder. But moving in this direction would crash our training when we try to backpropagate. Backpropagation will not work on a sampled variable, z is a sample from a random distribution, it is not a function. Backpropagation needs a function to apply the chain rule; it does not work here.</p>
+
+<p>So, what do we do?</p>
+
+<p>We use something called the <span class="badge reparam">Reparameterization Trick</span>. It helps us generate z as a function of the latent variables (mu and sigma) that can be backpropagated through, by introducing external randomness ε. We sample ε from a standard normal distribution N(0, I), then compute:</p>
+
+<div class="math-block">
+$$z = \mu + \sigma \times \varepsilon$$
+</div>
+
+<p>This way gradients can flow deterministically through mu and sigma while ignoring ε. This is the most interesting thing about the variational auto-encoder, I will be breaking it down with my code implementation too in the next section.</p>
+
+<div class="img-block">
+  <img src="assets/img/convvae/reparam_trick.png" alt="Reparameterization Trick Diagram">
+  <div class="caption">The reparameterization trick moves randomness outside the computational graph</div>
+</div>
+
+<p>Did I forget to say, VAEs were inspired by the Helmholtz machine. It was the first model that used a recognition model; however, it was very inefficient because it uses a sleep/wake algorithm. During the sleep phase, weights are updated to generate new data. During the wake phase, weights are updated to recognise hidden causes. These were two separate objectives that were not coherent with each other. But VAEs maximize a single objective known as the <span class="badge loss">ELBO</span> loss to update all weights simultaneously.</p>
+
+<div class="summary-box">
+  <h4>VAEs improved on the Helmholtz machine in three ways</h4>
+  <p><strong>1. Amortized inference</strong> — one encoder for all data points instead of separate optimization per point</p>
+  <p><strong>2. Reparameterization trick</strong> — allows backpropagation through stochastic sampling</p>
+  <p><strong>3. ELBO loss</strong> — one single unified objective instead of two separate ones</p>
+</div>
+
+<p>Can you now see how everything is making sense? Let us go on then!!</p>
+
+<hr>
+
+<h2 id="sec-1-3">1.3 The Intractability Problem</h2>
+
+<p>Intractable in ML simply means something that is not tractable to compute exactly. It can be incomputable if it requires an integral with no closed form solution.</p>
+
+<p>We want to know $p_\theta(x)$, which is the probability of how our data is structured under our model's parameters θ. It helps us to understand the underlying structure of our data without relying on target labels, this is known as unconditional modelling or more popularly unsupervised learning.</p>
+
+<p>But there is an issue when computing this probability. For every x, we need to add up the probabilities of all the z's that could generate that x. But z is continuous, so the number of possible z values is infinite. This makes $p_\theta(x)$ intractable. Since it is intractable, we cannot compute the gradient of it directly, which means we cannot update our parameters, which means we cannot train our model.</p>
+
+<div class="math-block">
+$$p_\theta(x) = \int p_\theta(x, z) \, dz = \int p_\theta(x|z) \, p_\theta(z) \, dz$$
+</div>
+
+<p>But there is another big issue. The intractability of $p_\theta(x)$ leads to a bigger problem. We need to compute $p_\theta(z|x)$, which is the true posterior. The true posterior answers the question: given an input x, which z generated it?</p>
+
+<p>But we need $p_\theta(x)$ to compute it since they are related through Bayes' rule. So if $p(x)$ is intractable, this makes the true posterior $p_\theta(z|x)$ also intractable and vice versa. We need both of these to train our VAE, so what is the workaround?</p>
+
+<div class="math-block">
+$$p_\theta(z|x) = \frac{p_\theta(x|z) \, p_\theta(z)}{p_\theta(x)}$$
+</div>
+
+<p>Remember I said $p_\theta(x, z)$ is tractable (computable). Let me break this down: $p_\theta(z)$ is the prior distribution over z, it is what we assume z looks like before seeing any data, we just set it to a simple Gaussian N(0, I). And $p_\theta(x|z)$ is the decoder, given a latent variable z, what data x does it produce? Both of these are simple to compute. The problem was never the joint $p_\theta(x, z)$, the problem is the integral over all possible z values to get $p_\theta(x)$.</p>
+
+<div class="math-block">
+$$p_\theta(x, z) = p_\theta(x|z) \, p_\theta(z) \tag{1.14}$$
+</div>
+
+<p>So now back to the workaround. We need to find approximate estimates of $p_\theta(x)$ and $p_\theta(z|x)$ so we can actually train the VAE model. VAEs improved on traditional VI by parameterizing the approximate posterior with a neural network, this is what makes amortized inference possible. The Helmholtz machine for example used more expensive and less optimized methods like the wake-sleep algorithm.</p>
+
+<p>The <span class="badge loss">ELBO</span> solves this problem. It gives us a computable lower bound on $p_\theta(x)$ that we can actually maximize with backpropagation, and in doing so it also pushes our approximate posterior $q_\phi(z|x)$ closer to the true posterior $p_\theta(z|x)$. I will go into detail on exactly how it does this in the next section.</p>
+
+<hr>
+
+<h2 id="sec-1-4">1.4 Deriving the ELBO</h2>
+
+<p>The first step in making our VAE fully tractable (computable) is to introduce a parametric inference model called the <span class="badge encoder">Encoder</span> which is given as $q_\phi(z|x)$ (approximate posterior). This helps us approximate our true posterior. The encoder can be used to generate the stochastic latent variable z.</p>
+
+<div class="callout info">
+  <strong>Note</strong>
+  <p>φ represents the parameters of the encoder (weights and biases).</p>
+</div>
+
+<p>Now, the big question, what does the ELBO do?</p>
+
+<div class="callout insight">
+  <strong>The short answer</strong>
+  <p>ELBO breaks the problem into two things we can actually compute. How good is the reconstruction, and how organised is the latent space. <strong>Reconstruction quality + latent space regularisation.</strong> That is the ELBO. Now let me show you where it comes from.</p>
+</div>
+
+<p>ELBO is an abbreviation for what we know as the <strong>Evidence Lower Bound</strong>.</p>
+
+<p>I will be proving and deriving the ELBO step by step, do not worry it is very easy to understand. We need to assume a few things before proving the ELBO. We need to assume that we have an approximate posterior called the inference model (encoder) and it is denoted by $q_\phi(z|x)$. We also need to assume a prior distribution $p(z)$, this is what we assume as the distribution of the latent space even before the encoder sees any data, which is why it is called a prior.</p>
+
+<p>During training the ELBO makes sure the latent space is organised and centered around N(0, I). Since our encoder assumed this as a prior, the encoder's output is pushed towards this prior by the ELBO. The component of the ELBO that pushes the encoder towards the prior is known as the <span class="badge loss">Kullback Leibler divergence</span> loss. This prior, this KL loss, and this encoder assumption is what makes our VAE capable of generating new samples. The encoder's output is pushed to be centered around the prior N(0, I), this means our latent space is centered around zero, so we can actually sample new random z values and pass them through the decoder to generate new faces. This is why the VAE is a generative model.</p>
+
+<p>We also need to assume we have a <span class="badge decoder">Decoder</span> $p_\theta(x|z)$ that takes the sampled z and reconstructs the input. The <span class="badge loss">Reconstruction Loss</span> component of the ELBO is responsible for pushing the decoder to reconstruct the input better. The RL loss gradient flows back through the decoder and also back through z to the encoder, so it updates both. The KL loss only updates the encoder since it goes directly to μ and log var without touching the decoder at all.</p>
+
+<div class="summary-box">
+  <h4>To summarise</h4>
+  <p><strong>KL loss</strong> — organises the latent space to be centered around N(0, I), it only updates the encoder</p>
+  <p><strong>RL loss</strong> — tells the encoder to encode better latent representations and the decoder to reconstruct the input better, it updates both the encoder and the decoder</p>
+</div>
+
+<p>I will go into the implementation of this in section 2 and how it maps to the formulas/derivation.</p>
+
+<p>Since we have everything required, we can now derive the ELBO:</p>
+
+<p>The first step is to take the $\log(p_\theta(x))$ and write it as an expectation over our encoder's $q_\phi(z|x)$. Since $p_\theta(x)$ does not depend on z, averaging over z does not change it.</p>
+
+<div class="math-block">
+$$\log p_\theta(x) = \mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x)] \tag{2.5}$$
+</div>
+
+<p>From Bayes' theorem, remember that $p_\theta(z|x) = \frac{p_\theta(x,z)}{p_\theta(x)}$. So we can rewrite $p_\theta(x)$ as $\frac{p_\theta(x,z)}{p_\theta(z|x)}$.</p>
+
+<div class="math-block">
+$$p_\theta(x) = \frac{p_\theta(x, z)}{p_\theta(z|x)} \tag{1.19}$$
+</div>
+
+<p>Which then becomes:</p>
+
+<div class="math-block">
+$$\log p_\theta(x) = \mathbb{E}_{q_\phi(z|x)}\left[\log \frac{p_\theta(x, z)}{p_\theta(z|x)}\right] \tag{2.6}$$
+</div>
+
+<p>The next thing we do is multiply the top and bottom of the fraction inside the log by $q_\phi(z|x)$. This does not change our equation since q/q = 1.</p>
+
+<div class="math-block">
+$$\log p_\theta(x) = \mathbb{E}_{q_\phi(z|x)}\left[\log \frac{p_\theta(x, z)}{q_\phi(z|x)} \cdot \frac{q_\phi(z|x)}{p_\theta(z|x)}\right] \tag{2.7}$$
+</div>
+
+<p>The next step is to split the expectation over $q_\phi(z|x)$ into two parts. The first part is known as the ELBO. The second part on the right is the KL divergence between our encoder $q_\phi(z|x)$ and the true posterior $p_\theta(z|x)$. This KL is intractable because it contains the true posterior which we cannot compute.</p>
+
+<div class="math-block">
+$$\log p_\theta(x) = \underbrace{\mathbb{E}_{q_\phi(z|x)}\left[\log \frac{p_\theta(x, z)}{q_\phi(z|x)}\right]}_{\text{ELBO}} \;+\; \underbrace{D_{KL}\big(q_\phi(z|x) \,\|\, p_\theta(z|x)\big)}_{\text{Intractable KL}} \tag{2.8}$$
+</div>
+
+<p>This KL divergence is always non negative. It is only zero if the approximate posterior $q_\phi(z|x)$ is equal to the true posterior $p_\theta(z|x)$.</p>
+
+<div class="math-block">
+$$D_{KL}\big(q_\phi(z|x) \,\|\, p_\theta(z|x)\big) \geq 0 \tag{2.9}$$
+</div>
+
+<p>Rearranging the ELBO equation using the rule $\log(a/b) = \log a - \log b$, we get the ELBO in its computable form. It is fully computable because $\log p(x,z)$ is tractable and $\log q(z|x)$ is our encoder which is also tractable unlike the KL in (2.8) that is intractable since $p_\theta(z|x)$ is intractable.</p>
+
+<div class="math-block">
+$$\mathcal{L}_{\theta,\phi}(x) = \mathbb{E}_{q_\phi(z|x)}\big[\log p_\theta(x, z) - \log q_\phi(z|x)\big] \tag{2.10}$$
+</div>
+
+<p>Rearranging the equation from (2.8), ELBO was moved to the left hand side and $\log(p_\theta(x))$ was moved to the RHS, we have:</p>
+
+<div class="math-block">
+$$\mathcal{L}_{\theta,\phi}(x) = \log p_\theta(x) - D_{KL}\big(q_\phi(z|x) \,\|\, p_\theta(z|x)\big) \tag{2.11}$$
+</div>
+
+<div class="math-block">
+$$\mathcal{L}_{\theta,\phi}(x) \leq \log p_\theta(x) \tag{2.12}$$
+</div>
+
+<p>Since $D_{KL} \geq 0$, subtracting it means that the ELBO is always less than or equal to $\log(p_\theta(x))$. This is why it is called the ELBO, the <strong>Evidence Lower Bound</strong>. We cannot compute $\log(p_\theta(x))$ directly since it is intractable, but if we maximize the ELBO, then we also push $\log(p_\theta(x))$ up.</p>
+
+<p>Now the final step, we expand the ELBO into the two losses we can actually implement (are computable/tractable). We expand $p_\theta(x,z)$ using equation (1.14):</p>
+
+<p>Using the rule $\log(ab) = \log a + \log b$, it becomes:</p>
+
+<div class="math-block">
+$$\mathcal{L}_{\theta,\phi}(x) = \mathbb{E}_{q_\phi(z|x)}\big[\log p_\theta(z) + \log p_\theta(x|z) - \log q_\phi(z|x)\big]$$
+</div>
+
+<p>We can regroup this into two separate terms:</p>
+
+<div class="math-block">
+$$\mathcal{L}_{\theta,\phi}(x) = \underbrace{\mathbb{E}_{q_\phi(z|x)}\big[\log p_\theta(x|z)\big]}_{\text{Reconstruction Loss}} \;+\; \underbrace{\mathbb{E}_{q_\phi(z|x)}\big[\log p_\theta(z) - \log q_\phi(z|x)\big]}_{-D_{KL}(q_\phi(z|x) \,\|\, p_\theta(z))}$$
+</div>
+
+<p>The first term $\mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)]$ is the <span class="badge loss">Reconstruction Loss</span>. It measures how well the decoder $p_\theta(x|z)$ reconstructs x from z. In my implementation I used Mean Squared Error (MSE) for this.</p>
+
+<p>The second term has $\log p_\theta(z) - \log q_\phi(z|x)$. Using the log rule this becomes a single fraction. And since the fraction is flipped compared to the KL definition, we get a negative sign. So the second term equals $-D_{KL}(q_\phi(z|x) \| p_\theta(z))$.</p>
+
+<div class="callout warning">
+  <strong>Important — two different KL divergences</strong>
+  <p>This is a <strong>DIFFERENT</strong> KL from the one in equation (2.8). The KL in (2.8) was between the encoder $q_\phi(z|x)$ and the <strong>true posterior</strong> $p_\theta(z|x)$ which is intractable. This KL is between the encoder $q_\phi(z|x)$ and the <strong>PRIOR</strong> $p_\theta(z) = \mathcal{N}(0, I)$. Since both are Gaussians, this has a closed form solution.</p>
+</div>
+
+<div class="math-block">
+$$D_{KL}\big(q_\phi(z|x) \,\|\, p_\theta(z)\big) = -\frac{1}{2} \sum_{j=1}^{J}\Big(1 + \log \sigma_j^2 - \mu_j^2 - \sigma_j^2\Big)$$
+</div>
+
+<p>So the final ELBO is:</p>
+
+<div class="math-block">
+$$\mathcal{L}_{\theta,\phi}(x) = \mathbb{E}_{q_\phi(z|x)}\big[\log p_\theta(x|z)\big] - D_{KL}\big(q_\phi(z|x) \,\|\, p_\theta(z)\big)$$
+</div>
+
+<p>And since I used β = 0.5 (Beta VAE from Higgins et al. 2017), my actual loss becomes:</p>
+
+<div class="math-block">
+$$\text{Loss} = -\mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)] + \beta \cdot D_{KL}\big(q_\phi(z|x) \,\|\, p_\theta(z)\big) \quad \text{where } \beta = 0.5$$
+</div>
+
+<p>This β controls the tradeoff. Lower β prioritises reconstruction quality. Higher β prioritises a more organised latent space but blurrier reconstructions. I chose 0.5 to get better reconstruction quality for my CelebA face generation.</p>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PART 2: THE IMPLEMENTATION
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="part-header implementation">Part 2: The Implementation</div>
+
+<h2 id="sec-2-1">2.1 Encoder</h2>
+
+<p>I already defined what an encoder is, but to recap: an <span class="badge encoder">Encoder</span> in a variational auto encoder is what takes the input features and compresses them into a more meaningful or semantic representation of the input. These semantic representations learn to remove noise from the input and focus on capturing the core features of that input. My encoder architecture consists of 3 stacked convolutional layers with <span class="badge jax">ReLU</span> activations that consistently downsample the image (64→32→16→8). I am pretty sure everyone knows what a convolutional layer is but for people who do not know, a conv layer takes inputs and extracts meaningful features from them like edges, eyes, nose while preserving the spatial structure of the image. It is usually in 3D form, unlike normal neural networks that flatten the image into 1D and lose all its spatial structure. The output of the last convolutional layer is then flattened and passed into two dense layers to form μ and log σ² (log σ² is used to compute σ in the reparameterization step).</p>
+
+<div class="arch-diagram">
+  <span class="shape">Input (3, 64, 64)</span><br>
+  <span class="arrow">&nbsp;&nbsp;→</span> <span class="layer">Conv2D</span>(3→32, kernel=4, stride=2, pad=1) → <span class="act">ReLU</span> → <span class="shape">(32, 32, 32)</span><br>
+  <span class="arrow">&nbsp;&nbsp;→</span> <span class="layer">Conv2D</span>(32→64, kernel=4, stride=2, pad=1) → <span class="act">ReLU</span> → <span class="shape">(64, 16, 16)</span><br>
+  <span class="arrow">&nbsp;&nbsp;→</span> <span class="layer">Conv2D</span>(64→128, kernel=4, stride=2, pad=1) → <span class="act">ReLU</span> → <span class="shape">(128, 8, 8)</span><br>
+  <span class="arrow">&nbsp;&nbsp;→</span> Flatten → <span class="shape">(8192,)</span><br>
+  <span class="arrow">&nbsp;&nbsp;→</span> <span class="layer">Dense</span>(8192→128) → <span class="param">μ</span><br>
+  <span class="arrow">&nbsp;&nbsp;→</span> <span class="layer">Dense</span>(8192→128) → <span class="param">log σ²</span>
+</div>
+
+<p>The implementation of the <span class="badge encoder">Convolutional</span> layer I wrote from scratch. Every forward pass uses <span class="badge jax">jax.lax.conv_general_dilated</span> for GPU-accelerated computation. You can check the full implementation on <a href="https://github.com/ojayballer/bvaex">GitHub</a>.</p>
+
+<pre data-lang="python"><code><span class="kw">class</span> <span class="nn">Convolutional</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="sf">self</span>, input_shape, adam, kernel_size, depth, padding=<span class="nb">1</span>, stride=<span class="nb">2</span>, seed=<span class="nb">0</span>):
+        input_depth, input_height, input_width = input_shape
+        <span class="sf">self</span>.depth = depth
+        <span class="sf">self</span>.padding = padding
+        <span class="sf">self</span>.stride = stride
+
+        <span class="cm"># H_out = floor((H + 2P - F) / S) + 1</span>
+        <span class="sf">self</span>.output_height = <span class="fn">int</span>(jnp.floor((input_height + <span class="nb">2</span> * <span class="sf">self</span>.padding - kernel_size) / <span class="sf">self</span>.stride) + <span class="nb">1</span>)
+        <span class="sf">self</span>.output_width = <span class="fn">int</span>(jnp.floor((input_width + <span class="nb">2</span> * <span class="sf">self</span>.padding - kernel_size) / <span class="sf">self</span>.stride) + <span class="nb">1</span>)
+
+        <span class="cm"># Xavier/Glorot Initialization</span>
+        fan_in = input_depth * kernel_size * kernel_size
+        fan_out = depth * kernel_size * kernel_size
+        std = jnp.sqrt(<span class="nb">2.0</span> / (fan_in + fan_out))
+
+        key = jax.random.PRNGKey(seed)
+        wkey, bkey = jax.random.split(key)
+        <span class="sf">self</span>.weights = jax.random.normal(wkey, (depth, input_depth, kernel_size, kernel_size)) * std
+        <span class="sf">self</span>.biases = jnp.zeros((depth, <span class="sf">self</span>.output_height, <span class="sf">self</span>.output_width))
+
+    <span class="kw">def</span> <span class="fn">forward</span>(<span class="sf">self</span>, input):
+        <span class="sf">self</span>.input = input
+        output = jax.lax.<span class="fn">conv_general_dilated</span>(
+            <span class="sf">self</span>.input, <span class="sf">self</span>.weights,
+            window_strides=(<span class="sf">self</span>.stride, <span class="sf">self</span>.stride),
+            padding=[(<span class="sf">self</span>.padding, <span class="sf">self</span>.padding), (<span class="sf">self</span>.padding, <span class="sf">self</span>.padding)],
+            dimension_numbers=(<span class="st">'NCHW'</span>, <span class="st">'OIHW'</span>, <span class="st">'NCHW'</span>)
+        )
+        output = output + <span class="sf">self</span>.biases[<span class="kw">None</span>, :, :, :]
+        <span class="kw">return</span> output</code></pre>
+
+<hr>
+
+<h2 id="sec-2-2">2.2 Reparameterization Trick</h2>
+
+<p>This is the bridge between the <span class="badge encoder">Encoder</span> and <span class="badge decoder">Decoder</span>. I have explained this before but a fast recap: the encoder outputs μ and log σ², but we need an actual sample z to pass to the decoder. Sampling directly from $\mathcal{N}(\mu, \sigma^2)$ would break backpropagation, so we use the <span class="badge reparam">Reparameterization Trick</span>.</p>
+
+<pre data-lang="python"><code><span class="kw">class</span> <span class="nn">Reparameterize</span>:
+    <span class="kw">def</span> <span class="fn">forward</span>(<span class="sf">self</span>, key, mu, log_var):
+        <span class="sf">self</span>.mu = mu
+        <span class="sf">self</span>.log_var = log_var
+        <span class="sf">self</span>.sigma = jnp.exp(<span class="nb">0.5</span> * <span class="sf">self</span>.log_var)
+        <span class="sf">self</span>.epsilon = jax.random.normal(key, <span class="sf">self</span>.sigma.shape)
+
+        <span class="kw">return</span> <span class="sf">self</span>.mu + <span class="sf">self</span>.sigma * <span class="sf">self</span>.epsilon  <span class="cm"># z</span>
+
+    <span class="kw">def</span> <span class="fn">backward</span>(<span class="sf">self</span>, output_gradient):
+        total_mu_gradient = output_gradient                                          <span class="cm"># dL/dz * dz/dmu</span>
+        total_log_var_gradient = output_gradient * <span class="nb">0.5</span> * <span class="sf">self</span>.sigma * <span class="sf">self</span>.epsilon  <span class="cm"># dL/dz * dz/dlog_var</span>
+        <span class="kw">return</span> total_mu_gradient, total_log_var_gradient</code></pre>
+
+<p>Three lines of code. That is the entire reparameterization trick. ε is sampled from N(0, I) using <span class="badge jax">jax.random.normal</span>, then z is computed deterministically as μ + σ × ε. Gradients flow through μ and σ back to the encoder because z is a function of them. The randomness in ε has no parameters, it is a constant, it cannot be backpropagated through so it does not block the gradient path.</p>
+
+<hr>
+
+<h2 id="sec-2-3">2.3 Decoder</h2>
+
+<p>The <span class="badge decoder">Decoder</span> takes the latent random variable z and reconstructs a 64×64 RGB image. It first passes z through a dense layer to expand it to shape (128, 8, 8). This is done because the current z is only 128 values, it does not have enough features to form the 3D input that the first transposed conv layer expects. The z is then reshaped and passed through 3 transposed convolutional layers that upsample: 8→16→32→64. Each transposed conv layer is followed by ReLU except the last layer which uses a sigmoid activation to output pixel values between 0 and 1.</p>
+
+<div class="arch-diagram">
+  <span class="shape">z (128,)</span><br>
+  <span class="arrow">&nbsp;&nbsp;→</span> <span class="layer">Dense</span>(128→8192) → Reshape → <span class="shape">(128, 8, 8)</span><br>
+  <span class="arrow">&nbsp;&nbsp;→</span> <span class="layer">TransposedConv2D</span>(128→64, kernel=4, stride=2, pad=1) → <span class="act">ReLU</span> → <span class="shape">(64, 16, 16)</span><br>
+  <span class="arrow">&nbsp;&nbsp;→</span> <span class="layer">TransposedConv2D</span>(64→32, kernel=4, stride=2, pad=1) → <span class="act">ReLU</span> → <span class="shape">(32, 32, 32)</span><br>
+  <span class="arrow">&nbsp;&nbsp;→</span> <span class="layer">TransposedConv2D</span>(32→3, kernel=4, stride=2, pad=1) → <span class="act">Sigmoid</span> → <span class="shape">(3, 64, 64)</span>
+</div>
+
+<p>The <span class="badge decoder">TransposedConv2D</span> was the hardest layer to implement from scratch. The forward pass flips the weights spatially and transposes the channel dimensions before doing a dilated convolution. The backward pass uses a regular convolution for the input gradient and a cross correlation with gradient un-flipping for the kernel gradient.</p>
+
+<pre data-lang="python"><code><span class="kw">class</span> <span class="nn">TransposedConv2D</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="sf">self</span>, input_shape, depth, adam, kernel_size=<span class="nb">4</span>, padding=<span class="nb">1</span>, stride=<span class="nb">2</span>, seed=<span class="nb">1</span>):
+        input_depth, input_height, input_width = input_shape
+
+        <span class="cm"># Transposed Conv Output Size</span>
+        <span class="sf">self</span>.output_height = (input_height - <span class="nb">1</span>) * stride - <span class="nb">2</span> * padding + kernel_size
+        <span class="sf">self</span>.output_width = (input_width - <span class="nb">1</span>) * stride - <span class="nb">2</span> * padding + kernel_size
+
+        <span class="cm"># Xavier/Glorot Initialization</span>
+        fan_in = input_depth * kernel_size * kernel_size
+        fan_out = depth * kernel_size * kernel_size
+        std = jnp.sqrt(<span class="nb">2.0</span> / (fan_in + fan_out))
+
+        key = jax.random.PRNGKey(seed)
+        wkey, bkey = jax.random.split(key)
+        <span class="sf">self</span>.weights = jax.random.normal(wkey, (input_depth, depth, kernel_size, kernel_size)) * std
+        <span class="sf">self</span>.biases = jnp.zeros((depth, <span class="sf">self</span>.output_height, <span class="sf">self</span>.output_width))
+
+    <span class="kw">def</span> <span class="fn">forward</span>(<span class="sf">self</span>, input):
+        <span class="sf">self</span>.input = input
+        pad = <span class="sf">self</span>.kernel_size - <span class="nb">1</span> - <span class="sf">self</span>.padding
+
+        <span class="cm"># Flip weights spatially and transpose channels</span>
+        w_flipped = jnp.flip(<span class="sf">self</span>.weights, axis=(<span class="nb">2</span>, <span class="nb">3</span>))
+        w_forward = jnp.transpose(w_flipped, (<span class="nb">1</span>, <span class="nb">0</span>, <span class="nb">2</span>, <span class="nb">3</span>))
+
+        output = jax.lax.<span class="fn">conv_general_dilated</span>(
+            <span class="sf">self</span>.input, w_forward,
+            window_strides=(<span class="nb">1</span>, <span class="nb">1</span>),
+            padding=[(pad, pad), (pad, pad)],
+            lhs_dilation=(<span class="sf">self</span>.stride, <span class="sf">self</span>.stride),
+            dimension_numbers=(<span class="st">'NCHW'</span>, <span class="st">'OIHW'</span>, <span class="st">'NCHW'</span>)
+        )
+        output = output + <span class="sf">self</span>.biases[<span class="kw">None</span>, :, :, :]
+        <span class="kw">return</span> output</code></pre>
+
+<hr>
+
+<h2 id="sec-2-4">2.4 ELBO Loss</h2>
+
+<p>The computable <span class="badge loss">ELBO</span> loss has two parts that I implemented separately: the <span class="badge loss">Reconstruction Loss</span> and the <span class="badge loss">KL Divergence</span> loss.</p>
+
+<p>The reconstruction loss measures how well the decoder's output matches the original input. I used Mean Squared Error with sum over spatial dimensions and mean over batch:</p>
+
+<pre data-lang="python"><code><span class="kw">class</span> <span class="nn">ReconstructionLoss</span>:
+    <span class="kw">def</span> <span class="fn">forward</span>(<span class="sf">self</span>, y_pred, y_true):
+        <span class="sf">self</span>.y_pred = y_pred
+        <span class="sf">self</span>.y_true = y_true
+        <span class="kw">return</span> jnp.mean(jnp.sum((<span class="sf">self</span>.y_true - <span class="sf">self</span>.y_pred)**<span class="nb">2</span>, axis=(<span class="nb">1</span>, <span class="nb">2</span>, <span class="nb">3</span>)))
+
+    <span class="kw">def</span> <span class="fn">backward</span>(<span class="sf">self</span>):
+        <span class="kw">return</span> <span class="nb">2</span> * (<span class="sf">self</span>.y_pred - <span class="sf">self</span>.y_true) / <span class="sf">self</span>.y_true.shape[<span class="nb">0</span>]</code></pre>
+
+<p>The KL divergence measures how close the encoder's output distribution is to the prior N(0, I). This uses the closed form formula for KL between two Gaussians:</p>
+
+<pre data-lang="python"><code><span class="kw">class</span> <span class="nn">KullBackLeiblerDivergenceLoss</span>:
+    <span class="kw">def</span> <span class="fn">forward</span>(<span class="sf">self</span>, mu, log_var):
+        <span class="sf">self</span>.mu = mu
+        <span class="sf">self</span>.log_var = jnp.clip(log_var, -<span class="nb">10</span>, <span class="nb">10</span>)
+        <span class="kw">return</span> -<span class="nb">0.5</span> * jnp.mean(jnp.sum(<span class="nb">1</span> + <span class="sf">self</span>.log_var - <span class="sf">self</span>.mu**<span class="nb">2</span> - jnp.exp(<span class="sf">self</span>.log_var), axis=<span class="nb">1</span>))
+
+    <span class="kw">def</span> <span class="fn">backward</span>(<span class="sf">self</span>):
+        batch_size = <span class="sf">self</span>.mu.shape[<span class="nb">0</span>]
+        <span class="kw">return</span> <span class="sf">self</span>.mu / batch_size, <span class="nb">0.5</span> * (jnp.exp(<span class="sf">self</span>.log_var) - <span class="nb">1</span>) / batch_size</code></pre>
+
+<p>The total loss combines them with β = 0.5:</p>
+
+<div class="math-block">
+$$\text{Loss} = \text{Reconstruction Loss} + \beta \cdot D_{KL}\big(q_\phi(z|x) \,\|\, p_\theta(z)\big) \quad \text{where } \beta = 0.5$$
+</div>
+
+<p>Getting the balance between these two losses and stabilising them was one of the hardest parts of this project. I will talk about that in the next section.</p>
+
+<hr>
+
+<h2 id="sec-2-5">2.5 AdamW Optimizer</h2>
+
+<p>I started with naive Stochastic Gradient Descent (SGD) but the training was too unstable, the KL loss kept exploding and vanishing. I could not find good hyperparameters for it. So I read the Adam paper by Kingma and Ba (2015) and implemented <span class="badge adam">AdamW</span> from scratch.</p>
+
+<p>But even Adam was not enough. Over 100 epochs of training, the weights grew and this caused the activations to explode through the decoder layers. So I added decoupled weight decay, which makes it AdamW. One line of code made the difference:</p>
+
+<pre data-lang="python"><code><span class="kw">class</span> <span class="nn">AdamW</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="sf">self</span>):
+        <span class="sf">self</span>.alpha = <span class="nb">0.001</span>
+        <span class="sf">self</span>.B1 = <span class="nb">0.9</span>
+        <span class="sf">self</span>.B2 = <span class="nb">0.999</span>
+        <span class="sf">self</span>.epsilon = <span class="nb">1e-8</span>
+        <span class="sf">self</span>.m = {}
+        <span class="sf">self</span>.v = {}
+        <span class="sf">self</span>.t = <span class="nb">0</span>
+
+    <span class="kw">def</span> <span class="fn">update</span>(<span class="sf">self</span>, name, weight, gradient):
+        <span class="kw">if</span> name <span class="kw">not in</span> <span class="sf">self</span>.m:
+            <span class="sf">self</span>.m[name] = jnp.zeros_like(weight)
+            <span class="sf">self</span>.v[name] = jnp.zeros_like(weight)
+
+        <span class="cm"># Weight decay — this one line prevents activation explosion</span>
+        weight = weight * (<span class="nb">1.0</span> - <span class="sf">self</span>.alpha * <span class="nb">0.01</span>)
+
+        <span class="sf">self</span>.m[name] = <span class="sf">self</span>.B1 * <span class="sf">self</span>.m[name] + (<span class="nb">1</span> - <span class="sf">self</span>.B1) * gradient
+        <span class="sf">self</span>.v[name] = <span class="sf">self</span>.B2 * <span class="sf">self</span>.v[name] + (<span class="nb">1</span> - <span class="sf">self</span>.B2) * gradient**<span class="nb">2</span>
+
+        m_hat = <span class="sf">self</span>.m[name] / (<span class="nb">1</span> - <span class="sf">self</span>.B1**<span class="sf">self</span>.t)
+        v_hat = <span class="sf">self</span>.v[name] / (<span class="nb">1</span> - <span class="sf">self</span>.B2**<span class="sf">self</span>.t)
+
+        <span class="kw">return</span> weight - <span class="sf">self</span>.alpha * m_hat / (jnp.sqrt(v_hat) + <span class="sf">self</span>.epsilon)
+
+    <span class="kw">def</span> <span class="fn">step</span>(<span class="sf">self</span>):
+        <span class="sf">self</span>.t += <span class="nb">1</span></code></pre>
+
+<div class="callout success">
+  <strong>The key line</strong>
+  <p><code>weight = weight * (1.0 - self.alpha * 0.01)</code></p>
+  <p>This shrinks the weights slightly every step, preventing them from growing unbounded. The rest of the optimizer is standard Adam: first moment estimate, second moment estimate, bias correction.</p>
+</div>
+
+<hr>
+
+<h2 id="sec-2-6">2.6 Tying It Together</h2>
+
+<p>The <span class="badge jax">model.py</span> connects everything into one pipeline. The forward pass goes: <span class="badge encoder">Encoder</span> → <span class="badge reparam">Reparameterize</span> → <span class="badge decoder">Decoder</span> → compute loss. The backward pass goes in reverse: loss gradients → decoder → reparameterize → encoder. Both the encoder and decoder weights are updated simultaneously through backpropagation.</p>
+
+<pre data-lang="python"><code><span class="kw">class</span> <span class="nn">CONVAE</span>:
+    <span class="kw">def</span> <span class="fn">__init__</span>(<span class="sf">self</span>, input, input_shape, kernel_size, encoder_filters, decoder_filters, latent_dim):
+        <span class="sf">self</span>.adam = Adam()
+        <span class="sf">self</span>.encoder = Encoder(encoder_filters, input, kernel_size, latent_dim, <span class="sf">self</span>.adam)
+        <span class="sf">self</span>.decoder = Decoder(input_shape, decoder_filters, latent_dim, <span class="sf">self</span>.adam)
+        <span class="sf">self</span>.reparameterize = Reparameterize()
+        <span class="sf">self</span>.elbo = ELBO()
+
+    <span class="kw">def</span> <span class="fn">forward</span>(<span class="sf">self</span>, input, key, kl_weight):
+        <span class="sf">self</span>.input = input
+        <span class="sf">self</span>.mu, <span class="sf">self</span>.log_var = <span class="sf">self</span>.encoder.forward(<span class="sf">self</span>.input)
+        <span class="sf">self</span>.z = <span class="sf">self</span>.reparameterize.forward(key, <span class="sf">self</span>.mu, <span class="sf">self</span>.log_var)
+        <span class="sf">self</span>.reconstructed_image = <span class="sf">self</span>.decoder.forward(<span class="sf">self</span>.z)
+        <span class="sf">self</span>.loss = <span class="sf">self</span>.elbo.forward(<span class="sf">self</span>.input, <span class="sf">self</span>.reconstructed_image, <span class="sf">self</span>.mu, <span class="sf">self</span>.log_var, kl_weight)
+        <span class="kw">return</span> <span class="sf">self</span>.loss, <span class="sf">self</span>.elbo.rl_loss, <span class="sf">self</span>.elbo.kl_loss
+
+    <span class="kw">def</span> <span class="fn">backward</span>(<span class="sf">self</span>, learning_rate):
+        <span class="sf">self</span>.RL_gradient, <span class="sf">self</span>.mu_gradient, <span class="sf">self</span>.log_var_gradient = <span class="sf">self</span>.elbo.backward()
+        <span class="sf">self</span>.z_input_gradient = <span class="sf">self</span>.decoder.backward(<span class="sf">self</span>.RL_gradient, learning_rate)
+
+        <span class="sf">self</span>.total_mu_gradient, <span class="sf">self</span>.total_log_var_gradient = <span class="sf">self</span>.reparameterize.backward(<span class="sf">self</span>.z_input_gradient)
+        <span class="sf">self</span>.total_mu_gradient = <span class="sf">self</span>.mu_gradient + <span class="sf">self</span>.total_mu_gradient
+        <span class="sf">self</span>.total_log_var_gradient = <span class="sf">self</span>.log_var_gradient + <span class="sf">self</span>.total_log_var_gradient
+
+        <span class="sf">self</span>.input_gradient = <span class="sf">self</span>.encoder.backward(
+            <span class="sf">self</span>.total_mu_gradient, <span class="sf">self</span>.total_log_var_gradient, learning_rate
+        )</code></pre>
+
+<p>This is Algorithm 1 from the Kingma and Welling paper. Sample a minibatch, sample noise, compute the ELBO, take gradients, update parameters. Repeat until convergence.</p>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PART 3: EVERYTHING THAT BROKE
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="part-header bugs">Part 3: Everything That Broke</div>
+
+<p>Now this is the part where I talk about everything that went wrong and how I fixed it. Building a VAE from scratch sounds cool but it is by no means a small feat, until you are staring at red and black faces at 3am and crashing out wondering what is going on with my training. And you think what am I getting wrong? I was able to scale through and here were my errors and how I fixed them.</p>
+
+<h2 id="sec-3-1">3.1 Gradient Scale Mismatch</h2>
+
+<p>This was the root cause of most of my early training failures. My <span class="badge loss">Reconstruction Loss</span> was dividing by way too many elements, so the gradients coming out of it were insanely tiny. Meanwhile the KL gradients went directly to μ and log_var at full strength without passing through any layers. KL was crushing the reconstruction and my decoder was not learning at all.</p>
+
+<div class="callout warning">
+  <strong>The problem</strong>
+  <p>Reconstruction gradients were divided across all pixels (3 × 64 × 64 = 12,288 elements), making them microscopic. KL gradients only divide across the batch, making them comparatively massive. KL dominated everything.</p>
+</div>
+
+<p>The fix was to change how I averaged the losses. Instead of averaging over every single pixel, I used sum over the spatial dimensions and mean over the batch only. This made the reconstruction as strong as the KL loss. After that, both losses could actually push the model in the right direction without one completely overpowering the other, meaning we can make our VAE good at reconstruction (discriminative) of inputs and also generation of new data.</p>
+
+<hr>
+
+<h2 id="sec-3-2">3.2 Posterior Collapse</h2>
+
+<p>Early in training the KL loss would just collapse to zero within the first few batches. The <span class="badge encoder">Encoder</span> learned to completely ignore the input and just output the prior N(0, I) for everything. Every image got the same μ and σ regardless of what face it was looking at. The decoder had nothing useful to work with so reconstruction also got worse.</p>
+
+<p>This happened because the KL loss was too easy to minimise. The encoder found that the fastest way to reduce the total loss was to just match the prior perfectly. This seems like an advantage but it is actually not. If KL = 0, the encoder will not encode meaningful features in the latent space and then this makes the decoder unable to predict the correct reconstructions.</p>
+
+<p>I tried KL annealing where you start with kl_weight = 0 and slowly ramp it up. KL annealing allows the model to focus on reconstruction first and then the KL loss picks up after some epochs. But what actually worked for me was using a fixed <strong>β = 0.5</strong>. This gave the reconstruction loss time to get stabilised before KL could dominate. The encoder had to actually encode useful features into the latent space because reconstruction was weighted more heavily. Once I settled on β = 0.5 the collapse stopped and both losses stabilised.</p>
+
+<hr>
+
+<h2 id="sec-3-3">3.3 Channel Collapse and Activation Explosion</h2>
+
+<p>Two problems were happening at the same time. First, all my layers were initialised with the same random seed, so every layer started with identical weights. Combined with ReLU, the red channel dominated and green and blue died. Channel stats showed <strong>R=0.69, G=0.01, B=0.003</strong>.</p>
+
+<p>Second, even the red channel was not producing real colors. The weights had grown way beyond their initial values over training, and the activations were exploding through each decoder layer. By the time values reached sigmoid they were in the millions, so sigmoid just snapped everything to 0 or 1. There were no real skin tones, just binary red and black.</p>
+
+<div class="img-block">
+  <img src="assets/img/convvae/channel_collapse.png" alt="Channel collapse — red and black faces">
+  <div class="caption">What my VAE was producing: red and black faces with dead green and blue channels</div>
+</div>
+
+<div class="callout success">
+  <strong>The fix</strong>
+  <p>Both problems got fixed together in one retraining run. Unique seeds per layer so all three channels get proper gradients from the start of training. And weight decay in the Adam optimizer to keep the weights bounded so activations cannot explode. After retraining, channel stats became <strong>R=0.56, G=0.49, B=0.44</strong> and sigmoid could finally output a range of real values bounded between 0 and 1.</p>
+</div>
+
+<div class="img-block">
+  <img src="assets/img/convvae/early_training.png" alt="Early training — blurry but alive">
+  <div class="caption">After the fix: blurry but all three channels alive and learning</div>
+</div>
+
+<hr>
+
+<h2 id="sec-3-4">3.4 Checkerboard Artifacts</h2>
+
+<p>My early reconstructions had a visible grid pattern on top of the faces. The face shapes were there but it looked like someone put a mesh over the image.</p>
+
+<p>This is a known problem with transposed convolution. When you use kernel_size=3 with stride=2, the kernel does not divide evenly by the stride. Some pixels get painted more than others creating an alternating bright and dark pattern across the whole image.</p>
+
+<p>The fix was switching to <strong>kernel_size=4</strong> with stride=2 and padding=1. Even kernel size divides evenly by the stride so every pixel gets equal treatment. But this required rewriting the entire <span class="badge decoder">TransposedConv2D</span> backward pass because the gradient math changes completely with different kernel sizes. The final formulation flips the weights in the forward pass and also un-flips the gradients in the backward pass.</p>
+
+<hr>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     PART 4: RESULTS
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="part-header results">Part 4: Results</div>
+
+<h2 id="sec-4-1">4.1 What the Model Produces</h2>
+
+<p>After 100 epochs on 200,000 CelebA faces, trained on an NVIDIA Tesla P100 GPU, here is what the model produces.</p>
+
+<h3>Reconstructions</h3>
+
+<div class="img-block">
+  <img src="assets/img/convvae/reconstruction_grid.png" alt="Reconstruction Grid">
+  <div class="caption">Top row: original CelebA faces. Bottom row: reconstructed from 128-dimensional latent space</div>
+</div>
+
+<p>Top row is the original, bottom row is what the model reconstructs after compressing it down to just 128 numbers and back. Hair color, skin tone, face shape, background are all preserved. The model is learning meaningful structure, not just memorising pixels.</p>
+
+<p>You will notice the reconstructions are slightly blurry. This is expected with MSE loss. MSE minimises pixel distance, which means when the model is uncertain about a detail it averages over the possibilities instead of committing to one. The result is soft edges. A perceptual loss would fix this but I kept MSE to stay faithful to the original paper.</p>
+
+<h3>Generated Faces</h3>
+
+<div class="img-block">
+  <img src="assets/img/convvae/generated_faces.png" alt="Generated Faces">
+  <div class="caption">Faces generated by sampling z ~ N(0, I) — none of these exist in the training set</div>
+</div>
+
+<p>These faces do not exist in the training set. I sampled random vectors from a standard Gaussian $z \sim \mathcal{N}(0, I)$ and passed them through the decoder. The fact that these look like plausible human faces means the latent space is well-structured. Random points in that space map to realistic outputs, not noise.</p>
+
+<h3>Latent Interpolation</h3>
+
+<div class="img-block">
+  <img src="assets/img/convvae/latent_interpolation.png" alt="Latent Interpolation">
+  <div class="caption">Smooth linear interpolation between two real faces in latent space</div>
+</div>
+
+<p>This is the part that convinced me the model actually works. I took two real faces, grabbed their latent vectors, and linearly interpolated between them. The transition is smooth. Skin tone shifts gradually, hair changes continuously, no sudden jumps or artifacts. That smoothness means the latent space is continuous and meaningful, which is exactly what the paper promises.</p>
+
+<h3>Loss Curves</h3>
+
+<div class="img-block">
+  <img src="assets/img/convvae/loss_curves.png" alt="Loss Curves">
+  <div class="caption">ELBO, Reconstruction Loss, and KL Divergence over 100 epochs</div>
+</div>
+
+<p>Both reconstruction loss and KL divergence converged cleanly. No collapse, no explosion, no oscillation. After everything I went through in Part 3 to get here, seeing these curves flatten out smoothly was satisfying.</p>
+
+<h3>Metrics</h3>
+
+<div class="callout info">
+  <strong>Context</strong>
+  <p>These metrics are from a 3-layer ConvVAE with fully manual backpropagation, no batch norm, no perceptual loss, and no pretrained components.</p>
+</div>
+
+<p>Evaluated on 1,000 hold-out CelebA images:</p>
+
+<table class="metrics-table">
+  <thead><tr><th>Metric</th><th>Value</th></tr></thead>
+  <tbody>
+    <tr><td>SSIM</td><td>0.9364</td></tr>
+    <tr><td>PSNR</td><td>22.49 dB</td></tr>
+    <tr><td>Final Reconstruction Loss</td><td>95.38</td></tr>
+    <tr><td>Final KL Divergence</td><td>110.14</td></tr>
+    <tr><td>Channel Balance (R / G / B)</td><td>0.56 / 0.49 / 0.44</td></tr>
+  </tbody>
+</table>
+
+<p>The SSIM above 0.93 means the reconstructions are structurally very close to the originals. The channel balance sitting near 0.5 for all three channels confirms the channel collapse from Part 3 is fully resolved. The metrics are pretty solid for a from scratch model, the changes/improvements in the next section would push them even further.</p>
+
+<hr>
+
+<h2 id="sec-4-2">4.2 What I'd Do Differently</h2>
+
+<p>This model works, but it is not state of the art. A few things that would push it further.</p>
+
+<p><strong>Batch Normalization.</strong> I did not implement batch norm from scratch because I would have had to rewrite my entire backward pass to accommodate it. But adding it would stabilise training and let me use higher learning rates.</p>
+
+<p><strong>Perceptual Loss.</strong> MSE treats every pixel equally, which is why VAE outputs tend to look blurry. MSE averages over uncertainty instead of committing to sharp details. A perceptual loss using features from a pretrained network would push the model to preserve high-level structure like edges and textures instead of just minimising pixel distance.</p>
+
+<p><strong>Deeper Architecture.</strong> Three conv layers is minimal. More layers with residual connections would let the encoder capture finer details before compressing to 128 dimensions.</p>
+
+<p><strong>Larger Latent Dimension.</strong> 128 works, but experimenting with 256 or 512 might capture more variation in the data, especially for diverse attributes like accessories, expressions, and lighting.</p>
+
+<hr>
+
+<h2 id="sec-4-3">4.3 Final Thoughts</h2>
+
+<p>Welldone if you made it this far. We just built a convolutional beta variational autoencoder from total scratch without any hidden abstractions. We went into the theory of the ELBO, the derivations, the intuitions, we stripped the whole paper down. I hope this was worth a read.</p>
+
+<p>This VAE architecture and the pure JAX engine I built for it is being adapted for anomaly detection on CERN high energy physics collision data. The idea is to train the VAE on normal collision events, learn what normal looks like in the latent space, and then flag any event that the model cannot reconstruct well as a potential anomaly. Same foundation, different data, real scientific application.</p>
+
+<p>I also plan to build a Vision Transformer next in JAX with Flax. Self-attention, multi-head attention, patch embeddings. The ConvVAE proved I understand what happens under the abstractions. Now I can use them.</p>
+
+<p>I will be doing more blogs like this for anything I implement. See you in the next one!</p>
+
+<!-- ═══════════════════════════════════════════════════════════════
+     REFERENCES
+     ═══════════════════════════════════════════════════════════════ -->
+<div class="references">
+  <h3>References</h3>
+  <ol>
+    <li>Kingma, D. P., & Welling, M. (2014). <a href="https://arxiv.org/abs/1312.6114">Auto-Encoding Variational Bayes</a>. ICLR 2014.</li>
+    <li>Kingma, D. P., & Welling, M. (2019). <a href="https://arxiv.org/abs/1906.02691">An Introduction to Variational Autoencoders</a>. Foundations and Trends in Machine Learning.</li>
+    <li>Kingma, D. P., & Ba, J. (2015). <a href="https://arxiv.org/abs/1412.6980">Adam: A Method for Stochastic Optimization</a>. ICLR 2015.</li>
+    <li>Higgins, I., et al. (2017). <a href="https://openreview.net/forum?id=Sy2fzU9gl">β-VAE: Learning Basic Visual Concepts with a Constrained Variational Framework</a>. ICLR 2017.</li>
+  </ol>
+</div>
+
+<div class="footer-bar">
+  <a href="https://github.com/ojayballer/bvaex">View the full source code on GitHub →</a>
+</div>
+
+</div><!-- /article-container -->
+</body>
+</html>
