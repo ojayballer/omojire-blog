@@ -219,21 +219,22 @@ h3 {
 pre {
   background: var(--code-bg);
   border-radius: 12px;
-  padding: 20px 22px;
-  overflow-x: hidden;
+  padding: 20px 24px;
+  overflow-x: auto;
   overflow-y: hidden;
   margin: 24px 0;
   border: 1px solid rgba(255,255,255,0.06);
   box-shadow: 0 4px 20px rgba(0,0,0,0.15);
+  scrollbar-width: none;
+  -ms-overflow-style: none;
 }
+pre::-webkit-scrollbar { display: none; }
 pre code {
   font-family: 'JetBrains Mono', monospace;
-  font-size: 0.7em;
-  line-height: 1.6;
+  font-size: 0.78em;
+  line-height: 1.65;
   color: var(--code-text);
-  white-space: pre-wrap;
-  word-break: break-all;
-  overflow-wrap: break-word;
+  white-space: pre;
 }
 
 /* Syntax highlighting classes */
@@ -502,7 +503,7 @@ a:hover { text-decoration: underline; }
   .part-header { font-size: 1em; padding: 10px 16px; }
   h2 { font-size: 1.15em; }
   pre { padding: 14px 14px; }
-  pre code { font-size: 0.65em; }
+  pre code { font-size: 0.72em; }
   .arch-diagram { padding: 12px 14px; font-size: 0.62em; line-height: 1.7; }
   .article-container { padding: 16px 14px 50px; }
   .callout { padding: 14px 16px; font-size: 0.9em; }
@@ -915,20 +916,70 @@ $$\text{Loss} = -\mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)] + \beta \cdot D_{K
 
 <p>I already defined what an encoder is, but to recap: an <span class="badge encoder">Encoder</span> in a variational auto encoder is what takes the input features and compresses them into a more meaningful or semantic representation of the input. These semantic representations learn to remove noise from the input and focus on capturing the core features of that input. My encoder architecture consists of 3 stacked convolutional layers with <span class="badge jax">ReLU</span> activations that consistently downsample the image (64→32→16→8). I am pretty sure everyone knows what a convolutional layer is but for people who do not know, a conv layer takes inputs and extracts meaningful features from them like edges, eyes, nose while preserving the spatial structure of the image. It is usually in 3D form, unlike normal neural networks that flatten the image into 1D and lose all its spatial structure. The output of the last convolutional layer is then flattened and passed into two dense layers to form μ and log σ² (log σ² is used to compute σ in the reparameterization step).</p>
 
-<div class="arch-visual">
-  <div class="arch-row"><span class="arch-box shape">Input (3, 64, 64)</span></div>
-  <div class="arch-row"><span class="arch-arrow">↓</span></div>
-  <div class="arch-row"><span class="arch-box conv">Conv2D</span><span class="arch-arrow">→</span><span class="arch-box act">ReLU</span><span class="arch-arrow">→</span><span class="arch-box shape">(32, 32, 32)</span></div>
-  <div class="arch-row"><span class="arch-arrow">↓</span></div>
-  <div class="arch-row"><span class="arch-box conv">Conv2D</span><span class="arch-arrow">→</span><span class="arch-box act">ReLU</span><span class="arch-arrow">→</span><span class="arch-box shape">(64, 16, 16)</span></div>
-  <div class="arch-row"><span class="arch-arrow">↓</span></div>
-  <div class="arch-row"><span class="arch-box conv">Conv2D</span><span class="arch-arrow">→</span><span class="arch-box act">ReLU</span><span class="arch-arrow">→</span><span class="arch-box shape">(128, 8, 8)</span></div>
-  <div class="arch-row"><span class="arch-arrow">↓</span></div>
-  <div class="arch-row"><span class="arch-box op">Flatten</span><span class="arch-arrow">→</span><span class="arch-box shape">(8192,)</span></div>
-  <div class="arch-row"><span class="arch-arrow">↓</span></div>
-  <div class="arch-row"><span class="arch-box dense">Dense(8192→128)</span><span class="arch-arrow">→</span><span class="arch-box param">μ</span></div>
-  <div class="arch-row"><span class="arch-box dense">Dense(8192→128)</span><span class="arch-arrow">→</span><span class="arch-box param">log σ²</span></div>
-</div>
+<svg width="100%" viewBox="0 0 680 420" style="margin:24px 0;">
+  <rect x="40" y="10" width="600" height="400" rx="16" fill="none" stroke="#e0dbd2" stroke-width="0.5" stroke-dasharray="4 4"/>
+  <text x="340" y="36" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="13" font-weight="600" fill="#6b6b6b">ENCODER</text>
+  
+  <!-- Input -->
+  <rect x="255" y="52" width="170" height="36" rx="8" fill="rgba(45,158,110,0.1)" stroke="rgba(45,158,110,0.3)" stroke-width="0.5"/>
+  <text x="340" y="74" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="12" font-weight="600" fill="#2d9e6e">Input (3, 64, 64)</text>
+
+  <!-- Arrow -->
+  <line x1="340" y1="88" x2="340" y2="108" stroke="#9a9a9a" stroke-width="1"/>
+  <polygon points="335,106 340,114 345,106" fill="#9a9a9a"/>
+
+  <!-- Conv1 -->
+  <rect x="170" y="116" width="200" height="36" rx="8" fill="rgba(214,64,69,0.1)" stroke="rgba(214,64,69,0.25)" stroke-width="0.5"/>
+  <text x="270" y="138" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="600" fill="#d64045">Conv2D (3→32)</text>
+  <rect x="385" y="116" width="56" height="36" rx="8" fill="rgba(197,154,46,0.1)" stroke="rgba(197,154,46,0.25)" stroke-width="0.5"/>
+  <text x="413" y="138" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="600" fill="#c59a2e">ReLU</text>
+  <text x="510" y="138" font-family="JetBrains Mono,monospace" font-size="11" fill="#2d9e6e">(32, 32, 32)</text>
+  
+  <!-- Arrow -->
+  <line x1="340" y1="152" x2="340" y2="168" stroke="#9a9a9a" stroke-width="1"/>
+  <polygon points="335,166 340,174 345,166" fill="#9a9a9a"/>
+
+  <!-- Conv2 -->
+  <rect x="170" y="176" width="200" height="36" rx="8" fill="rgba(214,64,69,0.1)" stroke="rgba(214,64,69,0.25)" stroke-width="0.5"/>
+  <text x="270" y="198" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="600" fill="#d64045">Conv2D (32→64)</text>
+  <rect x="385" y="176" width="56" height="36" rx="8" fill="rgba(197,154,46,0.1)" stroke="rgba(197,154,46,0.25)" stroke-width="0.5"/>
+  <text x="413" y="198" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="600" fill="#c59a2e">ReLU</text>
+  <text x="510" y="198" font-family="JetBrains Mono,monospace" font-size="11" fill="#2d9e6e">(64, 16, 16)</text>
+
+  <!-- Arrow -->
+  <line x1="340" y1="212" x2="340" y2="228" stroke="#9a9a9a" stroke-width="1"/>
+  <polygon points="335,226 340,234 345,226" fill="#9a9a9a"/>
+
+  <!-- Conv3 -->
+  <rect x="170" y="236" width="200" height="36" rx="8" fill="rgba(214,64,69,0.1)" stroke="rgba(214,64,69,0.25)" stroke-width="0.5"/>
+  <text x="270" y="258" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="600" fill="#d64045">Conv2D (64→128)</text>
+  <rect x="385" y="236" width="56" height="36" rx="8" fill="rgba(197,154,46,0.1)" stroke="rgba(197,154,46,0.25)" stroke-width="0.5"/>
+  <text x="413" y="258" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="600" fill="#c59a2e">ReLU</text>
+  <text x="510" y="258" font-family="JetBrains Mono,monospace" font-size="11" fill="#2d9e6e">(128, 8, 8)</text>
+
+  <!-- Arrow -->
+  <line x1="340" y1="272" x2="340" y2="288" stroke="#9a9a9a" stroke-width="1"/>
+  <polygon points="335,286 340,294 345,286" fill="#9a9a9a"/>
+
+  <!-- Flatten -->
+  <rect x="255" y="296" width="170" height="32" rx="8" fill="rgba(108,112,134,0.08)" stroke="rgba(108,112,134,0.2)" stroke-width="0.5"/>
+  <text x="340" y="316" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" fill="#6b6b6b">Flatten → (8192,)</text>
+
+  <!-- Arrow splits into two -->
+  <line x1="340" y1="328" x2="340" y2="345" stroke="#9a9a9a" stroke-width="1"/>
+  <line x1="340" y1="345" x2="240" y2="365" stroke="#9a9a9a" stroke-width="1"/>
+  <line x1="340" y1="345" x2="440" y2="365" stroke="#9a9a9a" stroke-width="1"/>
+  <polygon points="236,362 240,372 244,362" fill="#9a9a9a"/>
+  <polygon points="436,362 440,372 444,362" fill="#9a9a9a"/>
+
+  <!-- mu -->
+  <rect x="170" y="374" width="140" height="32" rx="8" fill="rgba(124,92,191,0.12)" stroke="rgba(124,92,191,0.25)" stroke-width="0.5"/>
+  <text x="240" y="394" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="12" font-weight="600" fill="#7c5cbf">μ (128,)</text>
+
+  <!-- log_var -->
+  <rect x="370" y="374" width="140" height="32" rx="8" fill="rgba(124,92,191,0.12)" stroke="rgba(124,92,191,0.25)" stroke-width="0.5"/>
+  <text x="440" y="394" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="12" font-weight="600" fill="#7c5cbf">log σ² (128,)</text>
+</svg>
 
 <p>The implementation of the <span class="badge encoder">Convolutional</span> layer I wrote from scratch. Every forward pass uses <span class="badge jax">jax.lax.conv_general_dilated</span> for GPU-accelerated computation. You can check the full implementation on <a href="https://github.com/ojayballer/bvaex">GitHub</a>.</p>
 
@@ -992,17 +1043,61 @@ $$\text{Loss} = -\mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)] + \beta \cdot D_{K
 
 <p>The <span class="badge decoder">Decoder</span> takes the latent random variable z and reconstructs a 64×64 RGB image. It first passes z through a dense layer to expand it to shape (128, 8, 8). This is done because the current z is only 128 values, it does not have enough features to form the 3D input that the first transposed conv layer expects. The z is then reshaped and passed through 3 transposed convolutional layers that upsample: 8→16→32→64. Each transposed conv layer is followed by ReLU except the last layer which uses a sigmoid activation to output pixel values between 0 and 1.</p>
 
-<div class="arch-visual">
-  <div class="arch-row"><span class="arch-box param">z (128,)</span></div>
-  <div class="arch-row"><span class="arch-arrow">↓</span></div>
-  <div class="arch-row"><span class="arch-box dense">Dense(128→8192)</span><span class="arch-arrow">→</span><span class="arch-box op">Reshape</span><span class="arch-arrow">→</span><span class="arch-box shape">(128, 8, 8)</span></div>
-  <div class="arch-row"><span class="arch-arrow">↓</span></div>
-  <div class="arch-row"><span class="arch-box tconv">TransposedConv2D</span><span class="arch-arrow">→</span><span class="arch-box act">ReLU</span><span class="arch-arrow">→</span><span class="arch-box shape">(64, 16, 16)</span></div>
-  <div class="arch-row"><span class="arch-arrow">↓</span></div>
-  <div class="arch-row"><span class="arch-box tconv">TransposedConv2D</span><span class="arch-arrow">→</span><span class="arch-box act">ReLU</span><span class="arch-arrow">→</span><span class="arch-box shape">(32, 32, 32)</span></div>
-  <div class="arch-row"><span class="arch-arrow">↓</span></div>
-  <div class="arch-row"><span class="arch-box tconv">TransposedConv2D</span><span class="arch-arrow">→</span><span class="arch-box act">Sigmoid</span><span class="arch-arrow">→</span><span class="arch-box shape">(3, 64, 64)</span></div>
-</div>
+<svg width="100%" viewBox="0 0 680 380" style="margin:24px 0;">
+  <rect x="40" y="10" width="600" height="360" rx="16" fill="none" stroke="#e0dbd2" stroke-width="0.5" stroke-dasharray="4 4"/>
+  <text x="340" y="36" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="13" font-weight="600" fill="#6b6b6b">DECODER</text>
+  
+  <!-- z input -->
+  <rect x="255" y="52" width="170" height="36" rx="8" fill="rgba(124,92,191,0.12)" stroke="rgba(124,92,191,0.25)" stroke-width="0.5"/>
+  <text x="340" y="74" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="12" font-weight="600" fill="#7c5cbf">z (128,)</text>
+
+  <!-- Arrow -->
+  <line x1="340" y1="88" x2="340" y2="108" stroke="#9a9a9a" stroke-width="1"/>
+  <polygon points="335,106 340,114 345,106" fill="#9a9a9a"/>
+
+  <!-- Dense + Reshape -->
+  <rect x="195" y="116" width="290" height="36" rx="8" fill="rgba(49,120,198,0.1)" stroke="rgba(49,120,198,0.25)" stroke-width="0.5"/>
+  <text x="340" y="138" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="600" fill="#3178c6">Dense(128→8192) → Reshape</text>
+  <text x="530" y="138" font-family="JetBrains Mono,monospace" font-size="11" fill="#2d9e6e">(128, 8, 8)</text>
+  
+  <!-- Arrow -->
+  <line x1="340" y1="152" x2="340" y2="168" stroke="#9a9a9a" stroke-width="1"/>
+  <polygon points="335,166 340,174 345,166" fill="#9a9a9a"/>
+
+  <!-- TConv1 -->
+  <rect x="140" y="176" width="230" height="36" rx="8" fill="rgba(232,118,58,0.1)" stroke="rgba(232,118,58,0.25)" stroke-width="0.5"/>
+  <text x="255" y="198" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="600" fill="#e8763a">TransposedConv2D (128→64)</text>
+  <rect x="385" y="176" width="56" height="36" rx="8" fill="rgba(197,154,46,0.1)" stroke="rgba(197,154,46,0.25)" stroke-width="0.5"/>
+  <text x="413" y="198" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="600" fill="#c59a2e">ReLU</text>
+  <text x="510" y="198" font-family="JetBrains Mono,monospace" font-size="11" fill="#2d9e6e">(64, 16, 16)</text>
+
+  <!-- Arrow -->
+  <line x1="340" y1="212" x2="340" y2="228" stroke="#9a9a9a" stroke-width="1"/>
+  <polygon points="335,226 340,234 345,226" fill="#9a9a9a"/>
+
+  <!-- TConv2 -->
+  <rect x="140" y="236" width="230" height="36" rx="8" fill="rgba(232,118,58,0.1)" stroke="rgba(232,118,58,0.25)" stroke-width="0.5"/>
+  <text x="255" y="258" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="600" fill="#e8763a">TransposedConv2D (64→32)</text>
+  <rect x="385" y="236" width="56" height="36" rx="8" fill="rgba(197,154,46,0.1)" stroke="rgba(197,154,46,0.25)" stroke-width="0.5"/>
+  <text x="413" y="258" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="600" fill="#c59a2e">ReLU</text>
+  <text x="510" y="258" font-family="JetBrains Mono,monospace" font-size="11" fill="#2d9e6e">(32, 32, 32)</text>
+
+  <!-- Arrow -->
+  <line x1="340" y1="272" x2="340" y2="288" stroke="#9a9a9a" stroke-width="1"/>
+  <polygon points="335,286 340,294 345,286" fill="#9a9a9a"/>
+
+  <!-- TConv3 -->
+  <rect x="140" y="296" width="230" height="36" rx="8" fill="rgba(232,118,58,0.1)" stroke="rgba(232,118,58,0.25)" stroke-width="0.5"/>
+  <text x="255" y="318" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="600" fill="#e8763a">TransposedConv2D (32→3)</text>
+  <rect x="385" y="296" width="76" height="36" rx="8" fill="rgba(197,154,46,0.1)" stroke="rgba(197,154,46,0.25)" stroke-width="0.5"/>
+  <text x="423" y="318" text-anchor="middle" font-family="JetBrains Mono,monospace" font-size="11" font-weight="600" fill="#c59a2e">Sigmoid</text>
+  <text x="520" y="318" font-family="JetBrains Mono,monospace" font-size="11" fill="#2d9e6e">(3, 64, 64)</text>
+
+  <!-- Output label -->
+  <line x1="340" y1="332" x2="340" y2="352" stroke="#9a9a9a" stroke-width="1"/>
+  <polygon points="335,350 340,358 345,350" fill="#9a9a9a"/>
+  <text x="340" y="374" text-anchor="middle" font-family="DM Sans,sans-serif" font-size="12" font-weight="600" fill="#6b6b6b">Reconstructed Image</text>
+</svg>
 
 <p>The <span class="badge decoder">TransposedConv2D</span> was the hardest layer to implement from scratch. The forward pass flips the weights spatially and transposes the channel dimensions before doing a dilated convolution. The backward pass uses a regular convolution for the input gradient and a cross correlation with gradient un-flipping for the kernel gradient.</p>
 
