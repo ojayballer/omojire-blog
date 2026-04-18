@@ -5,10 +5,8 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Convolutional Beta VAE from Scratch in JAX</title>
 
-<!-- Fonts -->
 <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600;8..60,700&family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 
-<!-- MathJax -->
 <script>
 MathJax = {
   tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], tags: 'ams' },
@@ -517,12 +515,9 @@ a:hover { text-decoration: underline; }
 
 <div class="article-container">
 
-<!-- ═══════════════════════════════════════════════════════════
-     HERO
-     ═══════════════════════════════════════════════════════════ -->
 <div class="hero">
   <h1>Convolutional Beta VAE from Scratch in JAX</h1>
-  <p class="subtitle">From Kingma & Welling's paper to generating faces — every gradient computed by hand</p>
+  <p class="subtitle">From Kingma & Welling's paper to generating faces: every gradient computed by hand</p>
   <p class="meta">April 18, 2026 · Omojire · <a href="https://github.com/ojayballer/bvaex">View source on GitHub →</a></p>
   <div class="tag-row">
     <span class="tag vae">VAE</span>
@@ -532,9 +527,6 @@ a:hover { text-decoration: underline; }
   </div>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════
-     TABLE OF CONTENTS
-     ═══════════════════════════════════════════════════════════ -->
 <div class="toc">
   <h3>Table of Contents</h3>
   <ul>
@@ -574,9 +566,6 @@ a:hover { text-decoration: underline; }
   </ul>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════
-     PART 1: READING THE PAPER
-     ═══════════════════════════════════════════════════════════════ -->
 <div class="part-header theory">Part 1: Reading the Paper</div>
 
 <h2 id="sec-1-1">1.1 What Even Is a VAE?</h2>
@@ -645,9 +634,9 @@ $$z = \mu + \sigma \times \varepsilon$$
 
 <div class="summary-box">
   <h4>VAEs improved on the Helmholtz machine in three ways</h4>
-  <p><strong>1. Amortized inference</strong> — one encoder for all data points instead of separate optimization per point</p>
-  <p><strong>2. Reparameterization trick</strong> — allows backpropagation through stochastic sampling</p>
-  <p><strong>3. ELBO loss</strong> — one single unified objective instead of two separate ones</p>
+  <p><strong>1. Amortized inference</strong>: one encoder for all data points instead of separate optimization per point</p>
+  <p><strong>2. Reparameterization trick</strong>: allows backpropagation through stochastic sampling</p>
+  <p><strong>3. ELBO loss</strong>: one single unified objective instead of two separate ones</p>
 </div>
 
 <p>Can you now see how everything is making sense? Let us go on then!!</p>
@@ -712,8 +701,8 @@ $$p_\theta(x, z) = p_\theta(x|z) \, p_\theta(z) \tag{1.14}$$
 
 <div class="summary-box">
   <h4>To summarise</h4>
-  <p><strong>KL loss</strong> — organises the latent space to be centered around N(0, I), it only updates the encoder</p>
-  <p><strong>RL loss</strong> — tells the encoder to encode better latent representations and the decoder to reconstruct the input better, it updates both the encoder and the decoder</p>
+  <p><strong>KL loss</strong>: organises the latent space to be centered around N(0, I), it only updates the encoder</p>
+  <p><strong>RL loss</strong>: tells the encoder to encode better latent representations and the decoder to reconstruct the input better, it updates both the encoder and the decoder</p>
 </div>
 
 <p>I will go into the implementation of this in section 2 and how it maps to the formulas/derivation.</p>
@@ -793,7 +782,7 @@ $$\mathcal{L}_{\theta,\phi}(x) = \underbrace{\mathbb{E}_{q_\phi(z|x)}\big[\log p
 <p>The second term has $\log p_\theta(z) - \log q_\phi(z|x)$. Using the log rule this becomes a single fraction. And since the fraction is flipped compared to the KL definition, we get a negative sign. So the second term equals $-D_{KL}(q_\phi(z|x) \| p_\theta(z))$.</p>
 
 <div class="callout warning">
-  <strong>Important — two different KL divergences</strong>
+  <strong>Important: two different KL divergences</strong>
   <p>This is a <strong>DIFFERENT</strong> KL from the one in equation (2.8). The KL in (2.8) was between the encoder $q_\phi(z|x)$ and the <strong>true posterior</strong> $p_\theta(z|x)$ which is intractable. This KL is between the encoder $q_\phi(z|x)$ and the <strong>PRIOR</strong> $p_\theta(z) = \mathcal{N}(0, I)$. Since both are Gaussians, this has a closed form solution.</p>
 </div>
 
@@ -817,14 +806,11 @@ $$\text{Loss} = -\mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)] + \beta \cdot D_{K
 
 <hr>
 
-<!-- ═══════════════════════════════════════════════════════════════
-     PART 2: THE IMPLEMENTATION
-     ═══════════════════════════════════════════════════════════════ -->
 <div class="part-header implementation">Part 2: The Implementation</div>
 
 <h2 id="sec-2-1">2.1 Encoder</h2>
 
-<p>I already defined what an encoder is, but to recap: an <span class="badge encoder">Encoder</span> in a variational auto encoder is what takes the input features and compresses them into a more meaningful or semantic representation of the input. These semantic representations learn to remove noise from the input and focus on capturing the core features of that input. My encoder architecture consists of 3 stacked convolutional layers with <span class="badge jax">ReLU</span> activations that consistently downsample the image (64→32→16→8). I am pretty sure everyone knows what a convolutional layer is but for people who do not know, a conv layer takes inputs and extracts meaningful features from them like edges, eyes, nose while preserving the spatial structure of the image. It is usually in 3D form, unlike normal neural networks that flatten the image into 1D and lose all its spatial structure. The output of the last convolutional layer is then flattened and passed into two dense layers to form μ and log σ² (log σ² is used to compute σ in the reparameterization step).</p>
+<p>I already defined what an encoder is, but to recap: an <span class="badge encoder">Encoder</span> in a variational auto-encoder is what takes the input features and compresses them into a more meaningful or semantic representation of the input. These semantic representations learn to remove noise from the input and focus on capturing the core features of that input. My encoder architecture consists of 3 stacked convolutional layers with <span class="badge jax">ReLU</span> activations that consistently downsample the image (64→32→16→8). I am pretty sure everyone knows what a convolutional layer is but for people who do not know, a conv layer takes inputs and extracts meaningful features from them like edges, eyes, nose while preserving the spatial structure of the image. It is usually in 3D form, unlike normal neural networks that flatten the image into 1D and lose all its spatial structure. The output of the last convolutional layer is then flattened and passed into two dense layers to form μ and log σ² (log σ² is used to compute σ in the reparameterization step).</p>
 
 <div class="arch-diagram">
   <span class="shape">Input (3, 64, 64)</span><br>
@@ -886,7 +872,7 @@ $$\text{Loss} = -\mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)] + \beta \cdot D_{K
         <span class="kw">return</span> <span class="sf">self</span>.mu + <span class="sf">self</span>.sigma * <span class="sf">self</span>.epsilon  <span class="cm"># z</span>
 
     <span class="kw">def</span> <span class="fn">backward</span>(<span class="sf">self</span>, output_gradient):
-        total_mu_gradient = output_gradient                                          <span class="cm"># dL/dz * dz/dmu</span>
+        total_mu_gradient = output_gradient                                        <span class="cm"># dL/dz * dz/dmu</span>
         total_log_var_gradient = output_gradient * <span class="nb">0.5</span> * <span class="sf">self</span>.sigma * <span class="sf">self</span>.epsilon  <span class="cm"># dL/dz * dz/dlog_var</span>
         <span class="kw">return</span> total_mu_gradient, total_log_var_gradient</code></pre>
 
@@ -906,7 +892,7 @@ $$\text{Loss} = -\mathbb{E}_{q_\phi(z|x)}[\log p_\theta(x|z)] + \beta \cdot D_{K
   <span class="arrow">&nbsp;&nbsp;→</span> <span class="layer">TransposedConv2D</span>(32→3, kernel=4, stride=2, pad=1) → <span class="act">Sigmoid</span> → <span class="shape">(3, 64, 64)</span>
 </div>
 
-<p>The <span class="badge decoder">TransposedConv2D</span> was the hardest layer to implement from scratch. The forward pass flips the weights spatially and transposes the channel dimensions before doing a dilated convolution. The backward pass uses a regular convolution for the input gradient and a cross correlation with gradient un-flipping for the kernel gradient.</p>
+<p>The <span class="badge decoder">TransposedConv2D</span> was the hardest layer to implement from scratch. The forward pass flips the weights spatially and transposes the channel dimensions before doing a dilated convolution. The backward pass uses a regular convolution for the input gradient and a cross correlation with gradient unflips for the kernel gradient.</p>
 
 <pre data-lang="python"><code><span class="kw">class</span> <span class="nn">TransposedConv2D</span>:
     <span class="kw">def</span> <span class="fn">__init__</span>(<span class="sf">self</span>, input_shape, depth, adam, kernel_size=<span class="nb">4</span>, padding=<span class="nb">1</span>, stride=<span class="nb">2</span>, seed=<span class="nb">1</span>):
@@ -1004,7 +990,7 @@ $$\text{Loss} = \text{Reconstruction Loss} + \beta \cdot D_{KL}\big(q_\phi(z|x) 
             <span class="sf">self</span>.m[name] = jnp.zeros_like(weight)
             <span class="sf">self</span>.v[name] = jnp.zeros_like(weight)
 
-        <span class="cm"># Weight decay — this one line prevents activation explosion</span>
+        <span class="cm"># Weight decay : this one line prevents activation explosion</span>
         weight = weight * (<span class="nb">1.0</span> - <span class="sf">self</span>.alpha * <span class="nb">0.01</span>)
 
         <span class="sf">self</span>.m[name] = <span class="sf">self</span>.B1 * <span class="sf">self</span>.m[name] + (<span class="nb">1</span> - <span class="sf">self</span>.B1) * gradient
@@ -1062,9 +1048,6 @@ $$\text{Loss} = \text{Reconstruction Loss} + \beta \cdot D_{KL}\big(q_\phi(z|x) 
 
 <hr>
 
-<!-- ═══════════════════════════════════════════════════════════════
-     PART 3: EVERYTHING THAT BROKE
-     ═══════════════════════════════════════════════════════════════ -->
 <div class="part-header bugs">Part 3: Everything That Broke</div>
 
 <p>Now this is the part where I talk about everything that went wrong and how I fixed it. Building a VAE from scratch sounds cool but it is by no means a small feat, until you are staring at red and black faces at 3am and crashing out wondering what is going on with my training. And you think what am I getting wrong? I was able to scale through and here were my errors and how I fixed them.</p>
@@ -1099,7 +1082,7 @@ $$\text{Loss} = \text{Reconstruction Loss} + \beta \cdot D_{KL}\big(q_\phi(z|x) 
 <p>Second, even the red channel was not producing real colors. The weights had grown way beyond their initial values over training, and the activations were exploding through each decoder layer. By the time values reached sigmoid they were in the millions, so sigmoid just snapped everything to 0 or 1. There were no real skin tones, just binary red and black.</p>
 
 <div class="img-block">
-  <img src="assets/img/convvae/channel_collapse.png" alt="Channel collapse — red and black faces">
+  <img src="assets/img/convvae/channel_collapse.png" alt="Channel collapse: red and black faces">
   <div class="caption">What my VAE was producing: red and black faces with dead green and blue channels</div>
 </div>
 
@@ -1109,7 +1092,7 @@ $$\text{Loss} = \text{Reconstruction Loss} + \beta \cdot D_{KL}\big(q_\phi(z|x) 
 </div>
 
 <div class="img-block">
-  <img src="assets/img/convvae/early_training.png" alt="Early training — blurry but alive">
+  <img src="assets/img/convvae/early_training.png" alt="Early training: blurry but alive">
   <div class="caption">After the fix: blurry but all three channels alive and learning</div>
 </div>
 
@@ -1125,9 +1108,6 @@ $$\text{Loss} = \text{Reconstruction Loss} + \beta \cdot D_{KL}\big(q_\phi(z|x) 
 
 <hr>
 
-<!-- ═══════════════════════════════════════════════════════════════
-     PART 4: RESULTS
-     ═══════════════════════════════════════════════════════════════ -->
 <div class="part-header results">Part 4: Results</div>
 
 <h2 id="sec-4-1">4.1 What the Model Produces</h2>
@@ -1149,7 +1129,7 @@ $$\text{Loss} = \text{Reconstruction Loss} + \beta \cdot D_{KL}\big(q_\phi(z|x) 
 
 <div class="img-block">
   <img src="assets/img/convvae/generated_faces.png" alt="Generated Faces">
-  <div class="caption">Faces generated by sampling z ~ N(0, I) — none of these exist in the training set</div>
+  <div class="caption">Faces generated by sampling z ~ N(0, I): none of these exist in the training set</div>
 </div>
 
 <p>These faces do not exist in the training set. I sampled random vectors from a standard Gaussian $z \sim \mathcal{N}(0, I)$ and passed them through the decoder. The fact that these look like plausible human faces means the latent space is well-structured. Random points in that space map to realistic outputs, not noise.</p>
@@ -1192,13 +1172,13 @@ $$\text{Loss} = \text{Reconstruction Loss} + \beta \cdot D_{KL}\big(q_\phi(z|x) 
   </tbody>
 </table>
 
-<p>The SSIM above 0.93 means the reconstructions are structurally very close to the originals. The channel balance sitting near 0.5 for all three channels confirms the channel collapse from Part 3 is fully resolved. The metrics are pretty solid for a from scratch model, the changes/improvements in the next section would push them even further.</p>
+<p>The SSIM above 0.93 means the reconstructions are structurally very close to the originals. The channel balance sitting near 0.5 for all three channels confirms the channel collapse from Part 3 is fully resolved. The metrics are pretty solid for a from-scratch model, the changes/improvements in the next section would push them even further.</p>
 
 <hr>
 
 <h2 id="sec-4-2">4.2 What I'd Do Differently</h2>
 
-<p>This model works, but it is not state of the art. A few things that would push it further.</p>
+<p>This model works, but it is not state-of-the-art. A few things that would push it further.</p>
 
 <p><strong>Batch Normalization.</strong> I did not implement batch norm from scratch because I would have had to rewrite my entire backward pass to accommodate it. But adding it would stabilise training and let me use higher learning rates.</p>
 
@@ -1212,7 +1192,7 @@ $$\text{Loss} = \text{Reconstruction Loss} + \beta \cdot D_{KL}\big(q_\phi(z|x) 
 
 <h2 id="sec-4-3">4.3 Final Thoughts</h2>
 
-<p>Welldone if you made it this far. We just built a convolutional beta variational autoencoder from total scratch without any hidden abstractions. We went into the theory of the ELBO, the derivations, the intuitions, we stripped the whole paper down. I hope this was worth a read.</p>
+<p>Welldone if you made it this far. We just built a convolutional beta variational auto-encoder from total scratch without any hidden abstractions. We went into the theory of the ELBO, the derivations, the intuitions, we stripped the whole paper down. I hope this was worth a read.</p>
 
 <p>This VAE architecture and the pure JAX engine I built for it is being adapted for anomaly detection on CERN high energy physics collision data. The idea is to train the VAE on normal collision events, learn what normal looks like in the latent space, and then flag any event that the model cannot reconstruct well as a potential anomaly. Same foundation, different data, real scientific application.</p>
 
@@ -1220,9 +1200,6 @@ $$\text{Loss} = \text{Reconstruction Loss} + \beta \cdot D_{KL}\big(q_\phi(z|x) 
 
 <p>I will be doing more blogs like this for anything I implement. See you in the next one!</p>
 
-<!-- ═══════════════════════════════════════════════════════════════
-     REFERENCES
-     ═══════════════════════════════════════════════════════════════ -->
 <div class="references">
   <h3>References</h3>
   <ol>
@@ -1237,6 +1214,5 @@ $$\text{Loss} = \text{Reconstruction Loss} + \beta \cdot D_{KL}\big(q_\phi(z|x) 
   <a href="https://github.com/ojayballer/bvaex">View the full source code on GitHub →</a>
 </div>
 
-</div><!-- /article-container -->
-</body>
+</div></body>
 </html>
