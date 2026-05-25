@@ -251,7 +251,7 @@ hr {
 
 <!-- HERO GRID -->
 <div class="img-block">
-  <img src="utils/images/sg3x/hero_grid.png" alt="Generated cat samples from sg3x">
+  <img src="utils/images /sg3x/hero_grid.png" alt="Generated cat samples from sg3x">
   <div class="caption">128x128 native resolution, upscaled to 512x512 for display. Generated from checkpoint 46000 using EMA weights.</div>
 </div>
 
@@ -305,7 +305,7 @@ $$z(x) = (\varphi_s * Z)(x)$$
 <p>So upsampling and downsampling are not the problem. They can be made equivariant. The problem is something else entirely.</p>
 
 <div class="img-block">
-  <img src="utils/images/sg3x/architecture.png" alt="StyleGAN3 Generator Architecture">
+  <img src="utils/images /sg3x/architecture.png" alt="StyleGAN3 Generator Architecture">
   <div class="caption">Generator architecture from Karras et al. (2021). The right side shows the filtered nonlinearity pipeline inside each synthesis layer.</div>
 </div>
 
@@ -494,7 +494,7 @@ step 1200|D:0.0312</div>
 <p>These are the generated samples from the final checkpoint using EMA weights.</p>
 
 <div class="img-block">
-  <img src="utils/images/sg3x/hero_grid.png" alt="4x4 grid of generated cat faces">
+  <img src="utils/images /sg3x/hero_grid.png" alt="4x4 grid of generated cat faces">
   <div class="caption">4x4 grid from checkpoint 46000. 128x128 native resolution upscaled to 512x512 for display.</div>
 </div>
 
@@ -503,7 +503,7 @@ step 1200|D:0.0312</div>
 <p>The latent walk is where it gets interesting. Interpolating between random points in W space produces smooth transitions between completely different cats. The fur color shifts gradually, the facial proportions morph, the ears and eyes adjust, and at no point does any frame show an obvious artifact or a discontinuous jump between two identities. The features are attached to the underlying content and not the pixel grid. When the latent code moves from one cat to another the textures actually follow. That is StyleGAN3 working as intended.</p>
 
 <div class="img-block">
-  <img src="utils/images/sg3x/latent_walk.gif" alt="Latent walk interpolation between cat faces">
+  <img src="utils/images /sg3x/latent_walk.gif" alt="Latent walk interpolation between cat faces">
   <div class="caption">Slerp interpolation in W space between random latent vectors. 512x512.</div>
 </div>
 
@@ -518,7 +518,7 @@ step 1200|D:0.0312</div>
 <p>If you look at my trash folder right now it is full of stylegan3.zip files. All of them have the same name because the workflow was, change something in the code, delete the old zip, create a new one, upload it to Kaggle, run it on TPU, watch it fail, repeat. Every time I changed something I deleted the previous version and made a fresh zip. The trash just kept accumulating.</p>
 
 <div class="img-block">
-  <img src="utils/images/sg3x/mounting.png" alt="Trash folder full of stylegan3.zip files">
+  <img src="utils/images /sg3x/mounting.png" alt="Trash folder full of stylegan3.zip files">
   <div class="caption">The real version control.</div>
 </div>
 
