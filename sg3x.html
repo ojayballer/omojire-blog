@@ -1,0 +1,553 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>sg3x: Building an Alias-Free GAN from the Paper Up</title>
+
+<link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:opsz,wght@8..60,300;8..60,400;8..60,600;8..60,700&family=JetBrains+Mono:wght@400;500;600&family=DM+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+<script>
+MathJax = {
+  tex: { inlineMath: [['$','$']], displayMath: [['$$','$$']], tags: 'ams' },
+  svg: { fontCache: 'global', scale: 1.15 }
+};
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mathjax/3.2.2/es5/tex-svg.min.js"></script>
+
+<style>
+:root {
+  --bg: #faf8f4;
+  --text: #2c2c2c;
+  --text-muted: #6b6b6b;
+  --text-light: #9a9a9a;
+  --accent-blue: #3178c6;
+  --border: #e0dbd2;
+  --code-bg: #f5f2ec;
+  --code-text: #2c2c2c;
+}
+
+*, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+
+body {
+  font-family: 'Source Serif 4', Georgia, serif;
+  background: var(--bg);
+  color: var(--text);
+  font-size: 16px;
+  line-height: 1.7;
+  -webkit-font-smoothing: antialiased;
+}
+
+.article-container {
+  max-width: 760px;
+  margin: 0 auto;
+  padding: 40px 24px 80px;
+}
+
+/* Hero */
+.hero {
+  text-align: center;
+  padding: 60px 0 40px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 48px;
+}
+.hero h1 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 2.4em;
+  font-weight: 700;
+  line-height: 1.15;
+  color: var(--text);
+  margin-bottom: 14px;
+  letter-spacing: -0.02em;
+}
+.hero .subtitle {
+  font-size: 1.05em;
+  color: var(--text-muted);
+  font-weight: 300;
+  margin-bottom: 16px;
+}
+.hero .meta {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85em;
+  color: var(--text-light);
+  letter-spacing: 0.04em;
+}
+.hero .meta a { color: var(--accent-blue); text-decoration: none; }
+.hero .meta a:hover { text-decoration: underline; }
+
+/* Headings */
+h2 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1.35em;
+  font-weight: 700;
+  color: var(--text);
+  margin: 48px 0 20px;
+  padding-bottom: 10px;
+  border-bottom: 2px solid var(--border);
+  letter-spacing: -0.01em;
+}
+h3 {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 1.15em;
+  font-weight: 600;
+  color: var(--text);
+  margin: 32px 0 14px;
+}
+
+p { margin-bottom: 16px; }
+
+/* Code blocks */
+pre {
+  background: var(--code-bg);
+  border-radius: 8px;
+  padding: 20px 24px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  margin: 24px 0;
+  border: 1px solid var(--border);
+  scrollbar-width: none;
+}
+pre::-webkit-scrollbar { display: none; }
+pre code {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78em;
+  line-height: 1.65;
+  color: var(--code-text);
+  white-space: pre;
+}
+.kw { color: #7c5cbf; }
+.fn { color: #3178c6; }
+.st { color: #2d9e6e; }
+.cm { color: #9a9a9a; font-style: italic; }
+.nb { color: #c59a2e; }
+.op { color: #6b6b6b; }
+.sf { color: #d64045; }
+.nn { color: #7c5cbf; }
+
+code:not(pre code) {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.85em;
+  background: rgba(49, 120, 198, 0.08);
+  color: var(--accent-blue);
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+/* Images */
+.img-block {
+  margin: 32px 0;
+  text-align: center;
+}
+.img-block img {
+  max-width: 100%;
+  border-radius: 10px;
+  box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+  border: 1px solid var(--border);
+}
+.img-block .caption {
+  font-family: 'DM Sans', sans-serif;
+  font-size: 0.85em;
+  color: var(--text-muted);
+  margin-top: 12px;
+  font-style: italic;
+}
+
+/* Video embed */
+.video-block {
+  margin: 32px 0;
+  text-align: center;
+}
+.video-block iframe {
+  width: 100%;
+  max-width: 640px;
+  height: 360px;
+  border-radius: 10px;
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.1);
+}
+
+/* Math */
+.math-block {
+  margin: 24px 0;
+  padding: 16px;
+  background: rgba(49, 120, 198, 0.03);
+  border-radius: 10px;
+  border: 1px solid rgba(49, 120, 198, 0.08);
+  overflow-x: auto;
+  text-align: center;
+}
+
+/* Log output */
+.log-block {
+  background: var(--code-bg);
+  border-radius: 8px;
+  padding: 16px 20px;
+  margin: 24px 0;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 0.78em;
+  line-height: 1.7;
+  color: var(--text-muted);
+  overflow-x: auto;
+  border: 1px solid var(--border);
+}
+
+/* Links, hr, refs */
+a { color: var(--accent-blue); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+hr {
+  border: none;
+  height: 1px;
+  background: var(--border);
+  margin: 48px 0;
+}
+
+.references {
+  margin: 48px 0 0;
+  padding-top: 28px;
+  border-top: 1px solid var(--border);
+}
+.references h3 {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 700;
+  margin-bottom: 16px;
+}
+.references ol {
+  padding-left: 20px;
+  font-size: 0.9em;
+  line-height: 1.8;
+}
+
+.footer-bar {
+  text-align: center;
+  padding: 32px 0;
+  margin-top: 32px;
+}
+.footer-bar a {
+  font-family: 'DM Sans', sans-serif;
+  font-weight: 600;
+  font-size: 0.9em;
+  color: var(--accent-blue);
+}
+
+@media (max-width: 600px) {
+  body { font-size: 14px; }
+  .hero h1 { font-size: 1.5em; }
+  pre { padding: 14px 14px; }
+  pre code { font-size: 0.72em; }
+  .article-container { padding: 16px 14px 50px; }
+  .video-block iframe { height: 200px; }
+}
+</style>
+</head>
+<body>
+<div class="article-container">
+
+<!-- HERO -->
+<div class="hero">
+  <h1>sg3x: Building an Alias-Free GAN from the Paper Up</h1>
+  <p class="meta">May 2026 · <a href="https://github.com/ojayballer/sg3x">GitHub</a></p>
+</div>
+
+<!-- HERO GRID -->
+<div class="img-block">
+  <img src="utils/images/sg3x/hero_grid.png" alt="Generated cat samples from sg3x">
+  <div class="caption">128x128 native resolution, upscaled to 512x512 for display. Generated from checkpoint 46000 using EMA weights.</div>
+</div>
+
+
+<h2>The Texture That Won't Move</h2>
+
+<p>If you turn your head your nose moves with it. That is just how things work in the real world. There is a natural coherence to movement where everything on an object moves together as one. But previous GAN architectures do not have this natural coherence. The textures in the generated images are glued to the pixel grid instead of being attached to the object. So if the object moves the textures stay behind. This is called texture sticking, and once you see it you cannot unsee it.</p>
+
+<div class="video-block">
+  <iframe src="https://www.youtube.com/embed/-2hLdOonvK0" frameborder="0" allowfullscreen></iframe>
+</div>
+
+<p>What we are trying to achieve is a property called translational equivariance. What I mean by that is, if the input is shifted by a certain amount, the output should also be shifted by that exact same amount. The nose moves with the head. The eyes move with the face. Everything stays attached. Previous GAN generators do not have this property and the causes go deeper than you might think.</p>
+
+<p>The most obvious cause is aliasing. The Nyquist-Shannon sampling theorem is a foundational theorem in signal processing that states that to perfectly reconstruct a continuous signal from its samples you must sample at a rate strictly greater than twice the highest frequency present in that signal. This threshold, half the sampling rate, is called the Nyquist limit. Aliasing occurs when a signal contains frequencies above this limit. Those excess frequencies do not just vanish. They fold back into the signal and corrupt it. In GANs specifically aliasing occurs when the generator tries to represent or sample detail at a resolution that is too low to faithfully capture it.</p>
+
+<p>But aliasing is not the only problem. The network is sneakier than that. It finds multiple ways to figure out exactly where it is in absolute pixel coordinates and it exploits all of them to anchor textures to fixed positions.</p>
+
+<p>Positional encoding is one of them. The generator starts from a fixed learned 4x4 tensor. As the network grows to higher resolutions it finds a way to use that base resolution as a positional reference, anchoring features to absolute pixel coordinates rather than to the object itself. Per-pixel noise inputs are another one. StyleGAN1 introduced these to let the network learn individual stochastic features like hair strands and skin pores but the model learned to use those absolute pixel positions as yet another coordinate system. And then there are image borders. The padding used in convolution operations creates detectable border patterns at the edges of feature maps and the network learns to use these borders as another positional reference, knowing where it is relative to the edge of the image.</p>
+
+<p>The paper calls these unintended sources of positional information. Together with aliasing they are the full set of reasons why textures stick to pixel coordinates instead of to the object.</p>
+
+<p>Now aliasing itself gets amplified by two things inside the generator. First, downsampling without proper filtering. This allows high frequency signals to leak through and corrupt the lower frequency signals at higher resolutions. Second, nonlinear activations like leaky ReLU are very aggressive towards signals. They create sharp edges which introduce high frequency components because they operate on individual pixels and produce discontinuities that the sampling rate cannot faithfully represent. Both of these compound on top of the positional information leaks to make texture sticking worse and worse as training progresses.</p>
+
+<p>The result is most visible in videos generated using latent interpolation. Instead of transitioning smoothly and naturally from one frame to the next the pixels stick to screen coordinates and do not move naturally with the object. A single generated image can still look perfectly realistic. The problem only becomes obvious in motion because the textures fail to move coherently with the object across frames.</p>
+
+<p>And here is the thing. Training makes this worse over time. As the network learns at higher resolutions it finds more ways to exploit these aliasing artifacts and the texture sticking builds up progressively. Nobody had rigorously solved this for GANs before StyleGAN3.</p>
+
+<p>This blog is about how StyleGAN3 solved all of this, the theory behind it, my full implementation of the paper in JAX, what I redesigned and everything that broke while building it and the results I got training on a TPU v5e-8. Let's get into it!</p>
+
+<hr>
+
+<h2>Ghosts in the Pixel Grid</h2>
+
+<p>StyleGAN3 treats every feature map as if it were a set of discrete samples from an underlying continuous signal. Not just at the input or the output but at every single layer inside the network. That distinction turns out to matter a lot.</p>
+
+<p>The paper represents the discrete signal as Z[x] and the underlying continuous signal as z(x). The two are connected through an interpolation filter and a Dirac comb III<sub>s</sub>. The Dirac comb is just a mathematical tool that picks values from a signal at regular evenly spaced intervals, like a comb with teeth. It is used to go from the continuous signal back to the discrete signal. The interpolation filter does the opposite. It is used to go from the discrete signal to the continuous signal.</p>
+
+<p>The connection between the discrete grid and the continuous signal is described by the Whittaker-Shannon interpolation formula:</p>
+
+<div class="math-block">
+$$z(x) = (\varphi_s * Z)(x)$$
+</div>
+
+<p>Where Z[x] is the discrete feature map, z(x) is the continuous signal it represents, φ<sub>s</sub> is the ideal interpolation filter and * denotes convolution.</p>
+
+<p>There is one practical issue with this formulation. Ideal interpolation requires an infinite number of pixels in theory because the filter has influence that spreads beyond the immediate region. As a practical solution the discrete feature map is stored as a 2D array slightly larger than the s² discrete samples, large enough to capture all values that influence z(x). From this point forward the paper treats z(x) as the actual signal being operated on and Z[x] as just a convenient discrete encoding of it. In practice everything in the network is discrete but the theory reasons about the continuous signal to explain why certain operations cause aliasing.</p>
+
+<p>Now upsampling and downsampling. Both of these can actually be made equivariant with proper filtering. Upsampling does not modify the continuous representation at all. Its only purpose is to increase the sampling rate to give subsequent operations more room before they hit the Nyquist limit. This is implemented practically by interleaving zeros in the discrete grid. When you interleave zeros between samples the signal now has gaps which cause the same frequency content to appear repeated at higher frequencies, like an echo in the frequency domain. Downsampling requires a lowpass filter first to remove frequencies above the Nyquist limit of the output resolution so the signal can be represented faithfully in the lower resolution grid. As long as this filtering is done correctly translation equivariance follows automatically from both operations.</p>
+
+<p>So upsampling and downsampling are not the problem. They can be made equivariant. The problem is something else entirely.</p>
+
+<div class="img-block">
+  <img src="utils/images/sg3x/architecture.png" alt="StyleGAN3 Generator Architecture">
+  <div class="caption">Generator architecture from Karras et al. (2021). The right side shows the filtered nonlinearity pipeline inside each synthesis layer.</div>
+</div>
+
+<p>The real problem is nonlinearities. Here is how the filtered nonlinearity works and this is the core contribution of the entire paper. First upsample by interleaving zeros to increase the sampling rate. Then apply a lowpass filter f<sub>u</sub> to remove the repeating frequency copies that were created by the zero interleaving during upsampling. Then apply leaky ReLU to introduce non-linearity. But leaky ReLU operates on each pixel individually and has no idea about the continuous representation we are trying to model. It creates sharp edges which introduce very high frequencies that the discrete grid cannot represent faithfully. So after leaky ReLU we apply another lowpass filter f<sub>d</sub> to remove all frequencies above the Nyquist limit and then we downsample to reduce the sampling rate back down.</p>
+
+<p>This full pipeline is the filtered nonlinearity and it is the core of StyleGAN3. We still need non-linearity in our layers because it is important in every deep learning architecture and the filtered nonlinearity gives us exactly that while making sure the discrete feature map is fundamentally modelled as if it respected the underlying continuous signal.</p>
+
+<p>One more thing before we move on. CNNs already have translational equivariance in their convolutional layers. If the input shifts, the feature maps shift in the same way. But that equivariance breaks down through operations like pooling and striding which throw away spatial information without proper filtering. StyleGAN3 pushes this much further. Every layer and operation inside the generator is redesigned to maintain strict equivariance, because if even one layer breaks it, texture sticking reappears somewhere in the pipeline.</p>
+
+<hr>
+
+<h2>Alias-Free by Design</h2>
+
+<p>In this section I will be going through how the StyleGAN3 generator was redesigned from the StyleGAN2 generator to be an alias-free translationally equivariant network. Everything we established in the previous sections about the continuous signal, the Nyquist limit, the filtered nonlinearity and equivariance was applied practically here.</p>
+
+<p>It is worth noting that the discriminator in StyleGAN3 is the exact same one from StyleGAN2. Only the generator was redesigned. This is because texture sticking is a generator side problem. The generator is what defines how features move spatially across synthesized frames so that is where the fix has to happen.</p>
+
+<p>The paper introduces two configs. StyleGAN3-T for translation equivariance and StyleGAN3-R which adds rotation equivariance on top. I implemented config-T because rotation equivariance requires 1x1 convolutions throughout which limits the model's capacity and makes it harder to train. For generating cat faces translation equivariance is what matters.</p>
+
+<p>So what actually changed? Almost everything in the generator.</p>
+
+<p>The first change is the learned constant input. In StyleGAN2 the synthesis network starts from a fixed learned 4x4x512 tensor that the network uses as a base to build the image from. The problem is that this tensor gives the network an absolute positional anchor, a fixed coordinate system it can exploit to anchor textures to pixel coordinates. StyleGAN3 replaces this with Fourier features. Fourier features naturally define a spatially infinite feature map because frequencies are defined in the continuous domain and are not tied to a specific pixel grid. The Fourier frequencies are sampled from a circular frequency band with f<sub>c</sub>=2 and are kept fixed over the entire course of training. They are not learned parameters. This gives the network a coordinate system that is attached to the content rather than the pixel grid. This is one of the most elegant changes in the paper because it directly addresses one of the biggest sources of texture sticking.</p>
+
+<p>The per-pixel noise inputs carried over from StyleGAN1 and StyleGAN2 were also removed. Instead of the model learning the absolute position of fine stochastic details like hair strands and pores, the model inherits these naturally through the alias-free operations. This takes away yet another source of positional information that the network could exploit.</p>
+
+<p>The mapping network was reduced from 8 layers to 2 layers. Path length regularization, mixing regularization and skip connections were all removed as well. These things helped keep StyleGAN2's training stable but they risked breaking equivariance and added extra compute so they all had to go. But if you remove all of these stabilization tools you still need something to keep training stable. So the underlying problem they were solving, keeping activation magnitudes stable during training, was fixed more directly with EMA variance normalization. During training the exponential moving average of the squared activation values σ² = E[x²] is tracked across all pixels and feature maps. The feature maps are then divided by √σ² to normalize their magnitude and in practice this division is baked directly into the convolution weights for efficiency. This keeps everything at a healthy magnitude throughout training while also slightly improving translational equivariance.</p>
+
+<p>So now every sublayer in the generator is translationally equivariant. The learned constant that gave the network a fixed coordinate system is gone. The per-pixel noise that gave it absolute positions is gone. The padding borders are handled by adding margins around the feature maps. And every nonlinearity goes through the filtered nonlinearity pipeline to prevent aliasing from creeping in. When every layer is equivariant the whole network is equivariant and there is nothing left for textures to stick to.</p>
+
+<p>Good job if you made it this far. This is where it gets real. The next section is about turning all of this theory into actual working code in JAX.</p>
+
+<hr>
+
+<h2>In JAX</h2>
+
+<p>I built this entire implementation from scratch in JAX. No PyTorch, no NVIDIA reference code, just the paper and raw JAX primitives. I wanted to understand every operation myself, from the filter design to the modulated convolutions to the training loop.</p>
+
+<p>Why JAX specifically? I love JAX. It is a functional framework built on top of XLA which means everything compiles to optimized machine code for TPU and GPU. It forces you to think about your computation graph explicitly because there is no global state, no hidden mutation, everything is pure functional. A lot of people find this hard. I find it natural. JAX on TPU is absurdly fast and it taught me more about memory management, sharding, kernel execution, numerical precision and overflow than any textbook ever could.</p>
+
+<p>I am only going to show three code blocks here. These are the operations that make StyleGAN3 what it is.</p>
+
+<p>The first is the Kaiser lowpass filter design. Every layer in the generator operates at a different resolution which means every layer has a different Nyquist limit. The filter parameters have to change per layer to match. This is pure signal processing baked into the architecture before training even starts. These filters are deterministic, not learned.</p>
+
+<pre><code><span class="kw">import</span> scipy.signal <span class="kw">as</span> sp_signal
+
+<span class="kw">def</span> <span class="fn">design_lowpass_filter</span>(numtaps:<span class="nn">int</span>,cutoff:<span class="nn">float</span>,width:<span class="nn">float</span>,fs:<span class="nn">float</span>):
+
+   <span class="kw">if</span> numtaps<=<span class="nb">1</span>:
+       <span class="kw">return</span> <span class="kw">None</span>
+   f=sp_signal.<span class="fn">firwin</span>(numtaps,cutoff=cutoff,width=width,fs=fs)
+   <span class="kw">return</span> jnp.array(f,dtype=jnp.float32)</code></pre>
+
+<p>scipy.signal.firwin designs a windowed sinc filter using a Kaiser window. The cutoff frequency is the Nyquist limit of the current layer. The width controls the transition band. The number of taps is determined by filter_size multiplied by the resampling factor for that layer. None of these are hyperparameters you tune during training. They are computed automatically by compute_layer_params which builds the full per-layer schedule from the equations in Section 3 of the paper. You never have to hardcode any of it.</p>
+
+<p>The second block is the filtered nonlinearity. This is the core of the entire paper and I explained the theory behind it in the previous section. Here is what it looks like in code.</p>
+
+<pre><code><span class="kw">def</span> <span class="fn">filtered_nonlinearity</span>(x,fu,fd,up,down,
+                         gain=<span class="nb">1.4142135</span>,slope=<span class="nb">0.2</span>,clamp=<span class="nb">256.0</span>):
+   B,C,H,W=x.shape
+
+   <span class="cm">## upsample by zero insertion</span>
+   <span class="kw">if</span> up><span class="nb">1</span>:
+       x_up=jnp.zeros((B,C,H*up,W*up),dtype=x.dtype)
+       x_up=x_up.at[:,:,::up,::up].set(x)
+       x=x_up
+
+   <span class="cm">## apply upsample filter with gain=up^2 to compensate zero insertion</span>
+   <span class="kw">if</span> fu <span class="kw">is not</span> <span class="kw">None</span>:
+       x=<span class="fn">apply_filter_1d</span>(x,fu,gain=<span class="fn">float</span>(up*up))
+
+   <span class="cm">## leaky relu with gain and clamp</span>
+   x=jax.nn.<span class="fn">leaky_relu</span>(x,slope) * gain
+   x=jnp.<span class="fn">clip</span>(x,-clamp,clamp)
+
+   <span class="cm">## fused anti-alias filter and downsample strided conv</span>
+   <span class="kw">if</span> down><span class="nb">1</span> <span class="kw">and</span> fd <span class="kw">is not</span> <span class="kw">None</span>:
+       x=<span class="fn">apply_filter_1d_down</span>(x,fd,down)
+   <span class="kw">elif</span> fd <span class="kw">is not</span> <span class="kw">None</span>:
+       x=<span class="fn">apply_filter_1d</span>(x,fd)
+   <span class="kw">elif</span> down><span class="nb">1</span>:
+       x=x[:,:,::down,::down]
+
+   <span class="kw">return</span> x</code></pre>
+
+<p>The code maps directly to the theory so I will not re-explain the pipeline. The things worth pointing out here are the implementation details. The gain of √2 preserves variance through leaky ReLU and the clamp at 256 prevents bfloat16 overflow which is NVIDIA's default. The apply_filter_1d_down function is an optimization I wrote that fuses the filter and downsample into a single strided depthwise convolution instead of filtering at full resolution and then discarding 75% of the computed pixels. I verified it is numerically identical with a max diff of 0.00e+00 on the forward pass.</p>
+
+<p>The third block is the depthwise convolution used for filtering. This is the one that made training actually viable on TPU.</p>
+
+<pre><code><span class="kw">def</span> <span class="fn">apply_filter_1d</span>(x,kf,gain=<span class="nb">1.0</span>):
+   B,C,H,W=x.shape
+   n=kf.shape[<span class="nb">0</span>]
+
+   <span class="cm">## scale filter in float32 then cast to activation dtype</span>
+   kf_scaled=(kf * jnp.<span class="fn">sqrt</span>(jnp.float32(gain))).<span class="fn">astype</span>(x.dtype)
+
+   <span class="cm">## horizontal pass depthwise conv tiled across C channels</span>
+   kf_h=jnp.<span class="fn">tile</span>(jnp.<span class="fn">reshape</span>(kf_scaled,(<span class="nb">1</span>,<span class="nb">1</span>,<span class="nb">1</span>,n)),(C,<span class="nb">1</span>,<span class="nb">1</span>,<span class="nb">1</span>))
+   x=jax.lax.<span class="fn">conv_general_dilated</span>(
+       lhs=x,rhs=kf_h,window_strides=(<span class="nb">1</span>,<span class="nb">1</span>),padding=<span class="st">'SAME'</span>,
+       feature_group_count=C,
+       dimension_numbers=(<span class="st">'NCHW'</span>,<span class="st">'OIHW'</span>,<span class="st">'NCHW'</span>))
+
+   <span class="cm">## vertical pass depthwise conv tiled across C channels</span>
+   kf_v=jnp.<span class="fn">tile</span>(jnp.<span class="fn">reshape</span>(kf_scaled,(<span class="nb">1</span>,<span class="nb">1</span>,n,<span class="nb">1</span>)),(C,<span class="nb">1</span>,<span class="nb">1</span>,<span class="nb">1</span>))
+   x=jax.lax.<span class="fn">conv_general_dilated</span>(
+       lhs=x,rhs=kf_v,window_strides=(<span class="nb">1</span>,<span class="nb">1</span>),padding=<span class="st">'SAME'</span>,
+       feature_group_count=C,
+       dimension_numbers=(<span class="st">'NCHW'</span>,<span class="st">'OIHW'</span>,<span class="st">'NCHW'</span>))
+
+   <span class="kw">return</span> x</code></pre>
+
+<p>The critical thing here is <code>feature_group_count=C</code>. My original implementation flattened the batch and channel dimensions together before the convolution. This made JAX treat it as a single large batch operation which completely bypassed the TPU MXU, the matrix multiply unit that makes TPUs fast. The MXU needs grouped matrix operations to activate and a flat B×C convolution does not give it that. Training was running at 0.18 steps per second. When I switched to feature_group_count=C which expresses the exact same operation as a grouped depthwise convolution, the MXU could finally accelerate it properly. Training jumped to 0.48 steps per second. That single change is what made training on TPU viable. This is also the same optimization that NVIDIA uses internally in their custom CUDA upfirdn2d kernel, I just arrived at it independently through JAX.</p>
+
+<p>One more thing about the filter scaling line. kf_scaled computes the gain multiplication in float32 for numerical precision and then casts the result to x.dtype which is bfloat16 during training, right before the convolution. Without that explicit cast JAX silently upcasts the entire convolution to float32 which defeats the purpose of training in bfloat16. One line fix for a silent precision bleed that I did not catch for a while.</p>
+
+<p>The full codebase including the generator, discriminator, mapping network, ADA augmentation pipeline, R1 regularization, EMA weight averaging, checkpoint management and the training loop is on <a href="https://github.com/ojayballer/sg3x">GitHub</a>.</p>
+
+<hr>
+
+<h2>Where Everything Went to Die</h2>
+
+<p>Now this is the part where I talk about everything that went wrong and how I fixed it. Building a StyleGAN3 from scratch in JAX on TPU sounds impressive until you are staring at cat shaped blobs at 4am wondering why your anti-aliasing does literally nothing. I went through a lot of pain building this and these are the three bugs that taught me the most.</p>
+
+<h3>Delta Filters</h3>
+
+<p>My original filter pipeline used 3x3 delta filters instead of proper Kaiser lowpass filters. A delta filter is essentially a filter that passes everything through unchanged. It does nothing. So my entire anti-aliasing pipeline, the core contribution of the StyleGAN3 paper, the thing that makes it different from StyleGAN2, was not active at all. Zero anti-aliasing across the entire generator.</p>
+
+<p>But here is the interesting part. The model still trained and still produced faces.</p>
+
+<p>GANs do not crash when anti-aliasing is missing. They just silently find workarounds using all the positional cues I talked about in the first section. The learned constant, the noise inputs, the border effects. The model was learning to generate cats by anchoring textures to pixel coordinates instead of learning proper equivariant representations. It was training as StyleGAN2 in a StyleGAN3 costume.</p>
+
+<p>The root cause was actually multiple things stacked on top of each other. The filter design formula was not normalizing the transition halfwidth by the sampling rate so all the computed filters collapsed to 3 taps regardless of the layer. On top of that I was using a manual Kaiser formula instead of scipy.signal.firwin which is what NVIDIA uses internally. And on top of that, lrelu_upsampling was not set to 2. NVIDIA's filtered nonlinearity upsamples by at least 2x for every synthesis layer even when the resolution does not change between layers. Without lrelu_upsampling=2 most layers had up=1 and down=1 which means the filter either does nothing or applies a delta. The whole anti-aliasing mechanism was dead in most layers.</p>
+
+<p>I only discovered this by sitting down and carefully comparing my filter outputs against what the paper specifies. The shapes were all wrong. Filters that should have been 27 to 81 taps were all 3 taps. That was the moment I realized the entire architecture was broken and everything I had trained so far was useless. Full restart.</p>
+
+<h3>bfloat16</h3>
+
+<p>This was not one bug. It was an entire category of bugs that all came from the same source. bfloat16 has 8 exponent bits and only 7 mantissa bits which gives it the same dynamic range as float32 but far less precision. On TPU v5e bfloat16 is the native dtype for the MXU so training in bfloat16 is significantly faster than float32. But that low precision creates problems everywhere.</p>
+
+<p>The first problem was in the modulated convolution. The weight tensor w and the style vector s were both in bfloat16 and the demodulation step was computing means and norms in bfloat16. With 512 channels the squared values could exceed bfloat16's representable range and the norm computation would lose so much precision that the weights would silently drift to bad magnitudes over training. Nothing crashed. The outputs just got progressively worse.</p>
+
+<p>The fix was pre-normalization. Before the modulated convolution I cast the weights and styles to float32 only for the norm computation, computed the scaling factor in full precision, then cast the result back to bfloat16 before multiplying.</p>
+
+<pre><code>w_f32=w.<span class="fn">astype</span>(jnp.float32)
+s_f32=style.<span class="fn">astype</span>(jnp.float32)
+w=w * (<span class="nb">1.0</span> / jnp.<span class="fn">sqrt</span>(jnp.<span class="fn">mean</span>(w_f32**<span class="nb">2</span>,axis=[<span class="nb">1</span>,<span class="nb">2</span>,<span class="nb">3</span>],keepdims=<span class="kw">True</span>) + <span class="nb">1e-8</span>)).<span class="fn">astype</span>(w.dtype)
+style=style * (<span class="nb">1.0</span> / jnp.<span class="fn">sqrt</span>(jnp.<span class="fn">mean</span>(s_f32**<span class="nb">2</span>) + <span class="nb">1e-8</span>)).<span class="fn">astype</span>(style.dtype)</code></pre>
+
+<p>That fixed the precision but created a new problem. Once I also fixed lrelu_upsampling=2 every synthesis layer was now creating intermediate tensors at 2x resolution. With 512 channels in float32 each intermediate was about 2GB and JAX holds all of them alive during backpropagation. TPU v5e only has 16GB per chip. Training crashed during XLA compilation with RESOURCE_EXHAUSTED after trying to allocate 34GB on a 16GB device.</p>
+
+<p>Two fixes. First, @nnx.remat on SynthesisLayer to recompute activations during the backward pass instead of storing them all in memory. Second, explicitly casting activations to bfloat16 after the first 1x1 convolution in the synthesis network so all downstream computation stays in bfloat16.</p>
+
+<p>But even after that there was still a silent precision leak. The lowpass filter kf was stored in float32. When a float32 kernel hits a bfloat16 activation inside jax.lax.conv_general_dilated XLA silently upcasts the entire convolution to float32. My entire filter pipeline was secretly running in float32 without me knowing. This defeated the purpose of all the bfloat16 casting I had just done. The fix was one line, .astype(x.dtype) on the filter kernel right before the convolution, the same line I talked about in the previous section.</p>
+
+<p>The last bfloat16 issue was the clamp at 256 in filtered_nonlinearity. Without it leaky ReLU outputs at high channel counts could theoretically exceed bfloat16's range and overflow to infinity. NVIDIA uses this same clamp in their reference code.</p>
+
+<h3>Step 1060</h3>
+
+<p>This is the one that hurt the most.</p>
+
+<p>At step 1060, around 34 kimg into training, the discriminator collapsed. D loss dropped from a healthy 0.5 to 1.7 oscillation range down to 0.02 to 0.09. G loss climbed to 3 to 5. The discriminator was winning so hard that the generator was getting essentially zero useful gradient signal.</p>
+
+<div class="log-block">step 1060|D:0.0789
+step 1100|D:0.0490
+step 1160|D:0.0257
+step 1200|D:0.0312</div>
+
+<p>This lasted for roughly 1000 steps which is about 32 kimg of training where G was learning almost nothing.</p>
+
+<p>The cause was ironic. The pre-normalization fix I added to modulated convolution for bfloat16 stability, the same fix from the previous section that solved the precision problem, also made D significantly stronger and more numerically stable. On a dataset of only 2000 images a stable discriminator can memorize the entire training set very quickly. D memorized the data faster than ADA with ada_kimg=500 could respond. By the time ADA started ramping up augmentation probability to fight back D was already dominant.</p>
+
+<p>I did not intervene. I did not restart or change hyperparameters. I let it run. And D recovered naturally by around step 2000. ADA had increased augmentation enough to break D's memorization and G adapted. From step 2000 onwards training was healthy and stayed healthy all the way to 1000+ kimg.</p>
+
+<p>But those 32 kimg of near-zero gradients cost something. The model trained for 180 kimg total in that early phase but only about 150 kimg of those had meaningful gradient signal. The generator's early learning was permanently delayed. The pre-normalization stabilized bfloat16 training but it also made D too powerful for a small dataset. On 200,000 images this would not have happened because D cannot memorize that much data. On 2000 images D memorized everything in 1000 steps and the augmentation pipeline was not fast enough to stop it.</p>
+
+<hr>
+
+<h2>Results</h2>
+
+<p>I trained on a TPU v5e-8 with a batch size of 32. The dataset was AFHQv2 cats, 2000 images at 128x128 with horizontal flips for a total effective size of 4000. The generator uses 11 synthesis layers with a channel schedule of 512 to 256, z_dim and w_dim of 512, and Fourier feature input at initial resolution 16x16. The discriminator is the same residual architecture from StyleGAN2 with minibatch standard deviation. Training ran for approximately 46,000 steps which is roughly 1488 kimg across about three weeks of sessions.</p>
+
+<p>The key hyperparameters that actually mattered were g_lr=0.0025 and d_lr=0.002, r1_gamma=0.5 with lazy R1 every 16 steps, ADA with a target of 0.6 and ada_kimg=500, and EMA decay of 0.999 on the generator weights. I did not use path length regularization, mixing regularization, or skip connections. None of them. The only stabilization mechanism beyond R1 and ADA was the EMA variance normalization baked into the synthesis layers.</p>
+
+<p>I want to talk about the ADA part for a second because training StyleGAN3 on 2000 images is genuinely hard. The discriminator can memorize that entire dataset in about 1000 steps if you let it, and once it does the generator stops getting useful gradients entirely. Adaptive discriminator augmentation is what makes small dataset training possible. It monitors how confident the discriminator is on real images and dynamically increases augmentation probability when D starts overfitting. NVIDIA trained on 140,000 images where the discriminator never runs out of new data to learn from. On a dataset this small ADA is not optional, it is the only reason training works at all.</p>
+
+<p>These are the generated samples from the final checkpoint using EMA weights.</p>
+
+<div class="img-block">
+  <img src="utils/images/sg3x/hero_grid.png" alt="4x4 grid of generated cat faces">
+  <div class="caption">4x4 grid from checkpoint 46000. 128x128 native resolution upscaled to 512x512 for display.</div>
+</div>
+
+<p>The model learned distinct breed variations with visible fur textures, proper ear shapes, and realistic eye coloring with coherent pupil structure. There are black cats, tabbies, whites, calicos, and the diversity feels natural rather than forced. Whiskers are visible on several samples and the backgrounds vary rather than collapsing to a single tone which is a common failure mode when the generator gets lazy.</p>
+
+<p>The latent walk is where it gets interesting. Interpolating between random points in W space produces smooth transitions between completely different cats. The fur color shifts gradually, the facial proportions morph, the ears and eyes adjust, and at no point does any frame show an obvious artifact or a discontinuous jump between two identities. The features are attached to the underlying content and not the pixel grid. When the latent code moves from one cat to another the textures actually follow. That is StyleGAN3 working as intended.</p>
+
+<div class="img-block">
+  <img src="utils/images/sg3x/latent_walk.gif" alt="Latent walk interpolation between cat faces">
+  <div class="caption">Slerp interpolation in W space between random latent vectors. 512x512.</div>
+</div>
+
+<p>FID came out to 31.22, computed on 2000 generated samples against the real dataset using clean-fid. For context, this is on 2000 training images at 128x128. The number would be lower on a larger dataset but 31.22 on a dataset this small with a from scratch implementation is a result I am happy with.</p>
+
+<hr>
+
+<h2>Reflections</h2>
+
+<p>I want to talk about what this project actually looked like from my side. Not the clean code on GitHub. The real version.</p>
+
+<p>If you look at my trash folder right now it is full of stylegan3.zip files. All of them have the same name because the workflow was, change something in the code, delete the old zip, create a new one, upload it to Kaggle, run it on TPU, watch it fail, repeat. Every time I changed something I deleted the previous version and made a fresh zip. The trash just kept accumulating.</p>
+
+<div class="img-block">
+  <img src="utils/images/sg3x/mounting.png" alt="Trash folder full of stylegan3.zip files">
+  <div class="caption">The real version control.</div>
+</div>
+
+<p>Before I wrote any code for this project I spent about two weeks reading through the GAN literature. The original GAN, DCGAN, Progressive GAN, StyleGAN1, StyleGAN2. I wanted to understand the full arc of what each paper introduced and what it was reacting to in the one before it. By the time I got to StyleGAN3 I already knew why the learned constant was a problem, why per-pixel noise leaks positional information, why AdaIN was replaced with weight demodulation. That context made the StyleGAN3 paper make sense on a level it would not have if I had just jumped straight in.</p>
+
+<p>Even with that background I still read Alias-Free Generative Adversarial Networks three times. The first time I thought the filtered nonlinearity was just "add a blur after ReLU" and missed the continuous signal framework entirely. The second time I understood the Nyquist argument but could not connect it to actual code. The third time it clicked. The whole paper is one idea, treat every feature map as samples from a continuous signal and make sure nothing in the generator violates that.</p>
+
+<p>The biggest thing I would do differently is the filter pipeline. I spent weeks training with delta filters, which is essentially no anti-aliasing at all, before I realized the entire core of StyleGAN3 was not active in my implementation. That whole period was wasted compute. If I had written a simple test at the start that prints filter shapes and compares them against the expected values from the paper equations I would have caught it on day one. I did not write that test because the model was training and producing faces so I assumed the filters were correct. GANs are dangerously forgiving like that. They will produce something that looks reasonable even when fundamental components are completely broken.</p>
+
+<p>I also would have moved to a larger dataset sooner. 2000 images made sense for debugging but the discriminator collapse at step 1060 and most of the training instability I dealt with just would not exist on 15,000 images. I knew that and still kept running on 2000 because the iteration cycle was fast and I kept telling myself one more run.</p>
+
+<p>The full codebase is at <a href="https://github.com/ojayballer/sg3x">github.com/ojayballer/sg3x</a>.</p>
+
+<!-- REFERENCES -->
+<div class="references">
+  <h3>References</h3>
+  <ol>
+    <li>Karras, T., Aittala, M., Laine, S., Harkonen, E., Hellsten, J., Lehtinen, J., & Aila, T. (2021). <a href="https://arxiv.org/abs/2106.12423">Alias-Free Generative Adversarial Networks</a>. NeurIPS.</li>
+    <li>Karras, T., Laine, S., Aittala, M., Hellsten, J., Lehtinen, J., & Aila, T. (2020). <a href="https://arxiv.org/abs/2006.06676">Training Generative Adversarial Networks with Limited Data</a>. NeurIPS.</li>
+    <li>Karras, T., Laine, S., Aittala, M., Hellsten, J., Lehtinen, J., & Aila, T. (2020). <a href="https://arxiv.org/abs/1912.04958">Analyzing and Improving the Image Quality of StyleGAN</a>. CVPR.</li>
+    <li>Karras, T., Laine, S., & Aila, T. (2019). <a href="https://arxiv.org/abs/1812.04948">A Style-Based Generator Architecture for Generative Adversarial Networks</a>. CVPR.</li>
+    <li>Goodfellow, I., et al. (2014). <a href="https://arxiv.org/abs/1406.2661">Generative Adversarial Nets</a>. NeurIPS.</li>
+  </ol>
+</div>
+
+<div class="footer-bar">
+  <a href="https://github.com/ojayballer/sg3x">github.com/ojayballer/sg3x</a>
+</div>
+
+</div>
+</body>
+</html>
