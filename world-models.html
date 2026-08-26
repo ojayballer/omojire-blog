@@ -1,0 +1,646 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>World Models: The Start of Something New</title>
+    <meta name="description" content="A detailed walkthrough of Ha and Schmidhuber's 2018 World Models paper, covering the V-M-C architecture, dream training, and the temperature parameter.">
+    <meta name="author" content="Omojire Kuseju">
+
+    <!-- KaTeX for LaTeX rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        /* ==========================================
+           RESET & BASE
+           ========================================== */
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            font-size: 18px;
+            scroll-behavior: smooth;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+        }
+
+        body {
+            font-family: 'Source Serif 4', 'Georgia', serif;
+            font-weight: 400;
+            line-height: 1.78;
+            color: #1a1a1a;
+            background-color: #fdfdfc;
+        }
+
+        ::selection {
+            background: rgba(45, 55, 72, 0.15);
+        }
+
+        /* ==========================================
+           LAYOUT
+           ========================================== */
+        .article-header {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 80px 24px 0;
+        }
+
+        .article-body {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 24px 100px;
+        }
+
+        /* ==========================================
+           HEADER
+           ========================================== */
+        .article-header .overline {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #6b7280;
+            margin-bottom: 20px;
+        }
+
+        .article-header h1 {
+            font-family: 'Source Serif 4', serif;
+            font-size: 2.6rem;
+            font-weight: 700;
+            line-height: 1.15;
+            color: #111;
+            margin-bottom: 24px;
+            letter-spacing: -0.02em;
+        }
+
+        .article-header .subtitle {
+            font-size: 1.15rem;
+            font-weight: 400;
+            line-height: 1.6;
+            color: #4a5568;
+            margin-bottom: 40px;
+            font-style: italic;
+        }
+
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding-bottom: 40px;
+            border-bottom: 1px solid #e5e7eb;
+            margin-bottom: 48px;
+        }
+
+        .article-meta .author-name {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.83rem;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .article-meta .meta-detail {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.78rem;
+            color: #6b7280;
+        }
+
+        .article-meta .meta-detail a {
+            color: #4a5568;
+            text-decoration: none;
+            border-bottom: 1px solid #d1d5db;
+            transition: border-color 0.2s;
+        }
+
+        .article-meta .meta-detail a:hover {
+            border-color: #1a1a1a;
+        }
+
+        .meta-separator {
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: #9ca3af;
+        }
+
+        /* ==========================================
+           TABLE OF CONTENTS
+           ========================================== */
+        .toc {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 28px 32px;
+            margin-bottom: 56px;
+        }
+
+        .toc-title {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #6b7280;
+            margin-bottom: 16px;
+        }
+
+        .toc ol {
+            list-style: none;
+            counter-reset: toc-counter;
+        }
+
+        .toc ol li {
+            counter-increment: toc-counter;
+            margin-bottom: 6px;
+        }
+
+        .toc ol li a {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.83rem;
+            color: #374151;
+            text-decoration: none;
+            transition: color 0.2s;
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+        }
+
+        .toc ol li a::before {
+            content: counter(toc-counter);
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #9ca3af;
+            min-width: 16px;
+        }
+
+        .toc ol li a:hover {
+            color: #111;
+        }
+
+        /* ==========================================
+           TYPOGRAPHY
+           ========================================== */
+        .article-body p {
+            margin-bottom: 1.4em;
+            font-size: 1rem;
+            color: #2d3748;
+        }
+
+        .article-body h2 {
+            font-family: 'Source Serif 4', serif;
+            font-size: 1.7rem;
+            font-weight: 600;
+            color: #111;
+            margin-top: 64px;
+            margin-bottom: 24px;
+            line-height: 1.25;
+            letter-spacing: -0.01em;
+        }
+
+        .article-body h2 .section-number {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.83rem;
+            font-weight: 600;
+            color: #9ca3af;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .article-body h3 {
+            font-family: 'Source Serif 4', serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-top: 40px;
+            margin-bottom: 16px;
+            line-height: 1.35;
+        }
+
+        /* ==========================================
+           LINKS
+           ========================================== */
+        .article-body a {
+            color: #1a1a1a;
+            text-decoration: none;
+            border-bottom: 1.5px solid #cbd5e0;
+            transition: border-color 0.2s ease;
+        }
+
+        .article-body a:hover {
+            border-color: #1a1a1a;
+        }
+
+        /* ==========================================
+           FIGURES
+           ========================================== */
+        figure {
+            margin: 48px 0;
+            text-align: center;
+        }
+
+        figure.wide {
+            margin-left: -80px;
+            margin-right: -80px;
+        }
+
+        figure img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 4px;
+        }
+
+        figure.bordered img {
+            border: 1px solid #e5e7eb;
+        }
+
+        figcaption {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.78rem;
+            color: #6b7280;
+            margin-top: 14px;
+            line-height: 1.55;
+            max-width: 560px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        figcaption strong {
+            color: #374151;
+            font-weight: 600;
+        }
+
+        /* ==========================================
+           EQUATIONS
+           ========================================== */
+        .equation-block {
+            background: #f8f9fa;
+            border-left: 3px solid #d1d5db;
+            padding: 20px 28px;
+            margin: 32px 0;
+            border-radius: 0 4px 4px 0;
+            overflow-x: auto;
+        }
+
+        .equation-block .katex-display {
+            margin: 0;
+        }
+
+        /* ==========================================
+           ASIDE / CALLOUT
+           ========================================== */
+        .aside {
+            background: #f0f4f8;
+            border-left: 3px solid #4a5568;
+            padding: 20px 24px;
+            margin: 36px 0;
+            border-radius: 0 4px 4px 0;
+            font-size: 0.92rem;
+            color: #2d3748;
+            line-height: 1.65;
+        }
+
+        .aside p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* ==========================================
+           HORIZONTAL RULE
+           ========================================== */
+        .section-break {
+            border: none;
+            height: 1px;
+            background: #e5e7eb;
+            margin: 64px 0;
+        }
+
+        /* ==========================================
+           REFERENCES
+           ========================================== */
+        .references {
+            margin-top: 64px;
+            padding-top: 40px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .references h2 {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.83rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #6b7280;
+            margin-top: 0;
+            margin-bottom: 24px;
+        }
+
+        .references ol {
+            list-style: none;
+            counter-reset: ref-counter;
+            padding: 0;
+        }
+
+        .references ol li {
+            counter-increment: ref-counter;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.83rem;
+            color: #4a5568;
+            margin-bottom: 12px;
+            padding-left: 28px;
+            position: relative;
+            line-height: 1.55;
+        }
+
+        .references ol li::before {
+            content: counter(ref-counter) ".";
+            position: absolute;
+            left: 0;
+            font-weight: 600;
+            color: #9ca3af;
+        }
+
+        .references ol li a {
+            color: #4a5568;
+            border-bottom: 1px solid #d1d5db;
+            text-decoration: none;
+            transition: border-color 0.2s;
+        }
+
+        .references ol li a:hover {
+            border-color: #4a5568;
+        }
+
+        /* ==========================================
+           FOOTER
+           ========================================== */
+        .article-footer {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 24px 80px;
+        }
+
+        .footer-line {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.78rem;
+            color: #9ca3af;
+            text-align: center;
+            padding-top: 40px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .footer-line a {
+            color: #6b7280;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+
+        .footer-line a:hover {
+            border-color: #6b7280;
+        }
+
+        /* ==========================================
+           RESPONSIVE
+           ========================================== */
+        @media (max-width: 840px) {
+            figure.wide {
+                margin-left: 0;
+                margin-right: 0;
+            }
+        }
+
+        @media (max-width: 640px) {
+            html {
+                font-size: 16px;
+            }
+
+            .article-header {
+                padding: 48px 20px 0;
+            }
+
+            .article-header h1 {
+                font-size: 2rem;
+            }
+
+            .article-body {
+                padding: 0 20px 80px;
+            }
+
+            .toc {
+                padding: 20px 24px;
+            }
+
+            .equation-block {
+                padding: 16px 20px;
+            }
+
+            .article-footer {
+                padding: 0 20px 60px;
+            }
+        }
+
+        /* ==========================================
+           KATEX OVERRIDES
+           ========================================== */
+        .katex-display {
+            margin: 1em 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        .katex {
+            font-size: 1.05em;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ==================== HEADER ==================== -->
+    <header class="article-header">
+        <div class="overline">Research Notes</div>
+        <h1>World Models: The Start of Something New</h1>
+        <p class="subtitle">Going through Ha and Schmidhuber's 2018 paper and writing down what I actually understood from it, including the parts that confused me along the way.</p>
+        <div class="article-meta">
+            <span class="author-name">Omojire Kuseju</span>
+            <span class="meta-separator"></span>
+            <span class="meta-detail">August 2026</span>
+            <span class="meta-separator"></span>
+            <span class="meta-detail"><a href="https://x.com/ojbaby_11">𝕏</a></span>
+        </div>
+    </header>
+
+    <!-- ==================== BODY ==================== -->
+    <main class="article-body">
+
+        <!-- TABLE OF CONTENTS -->
+        <nav class="toc" id="toc">
+            <div class="toc-title">Contents</div>
+            <ol>
+                <li><a href="#sec-1">What are World Models?</a></li>
+                <li><a href="#sec-2">Ha and Schmidhuber</a></li>
+                <li><a href="#sec-3">Training in a Dream</a></li>
+                <li><a href="#sec-4">What Comes Next</a></li>
+                <li><a href="#sec-refs">References</a></li>
+            </ol>
+        </nav>
+
+        <!-- ==================== SECTION 1 ==================== -->
+        <h2 id="sec-1">
+            <span class="section-number">1</span>
+            What are World Models?
+        </h2>
+
+        <p>A world model is essentially a system that tries to predict what happens next based on the current state of an environment and whatever action an agent decides to take, all without actually needing to perform that action first. That is really the core idea behind world models regardless of which paper or implementation you are looking at. Ha and Schmidhuber built theirs using a Variational Autoencoder (VAE) and a Recurrent Neural Network (RNN), Dreamer approaches the problem with a different architecture, and Yann LeCun's Joint Embedding Predictive Architecture (JEPA) takes yet another route by focusing on predicting abstract representations of future states rather than attempting to reconstruct every detail of the future observation. Although the implementations differ significantly, they are all trying to solve the same fundamental problem, which is giving a system the ability to anticipate future outcomes before they actually occur.</p>
+
+        <p>I think this area is still underexplored relative to how important it could be, partly because humans seem to do something very similar all the time without consciously thinking about it.</p>
+
+        <p>For example, imagine riding a bicycle and suddenly noticing an obstacle in your path. You do not stop to consciously calculate every possible outcome before making a decision. Instead, based on your experience, your brain already has a rough understanding of your speed, your balance, the distance to the obstacle and the possible actions available to you. Whether you continue straight, brake or swerve, you usually have an intuitive sense of what is likely to happen before you actually commit to any of those actions. The decision feels almost automatic because you are able to anticipate the consequences of different choices and react accordingly.</p>
+
+        <figure class="bordered">
+            <img src="utils/images/world-models/bicycle_prediction.png" alt="Diagram showing a cyclist approaching an obstacle with three branching predicted outcomes: swerve, brake, or continue straight">
+            <figcaption><strong>Figure 1.</strong> Before committing to any action, the brain runs an internal prediction of what each choice is likely to produce. World models try to replicate this process computationally.</figcaption>
+        </figure>
+
+        <p>This is very similar to the idea behind world models. Rather than acting immediately, the system first develops an internal prediction of what is likely to happen under different actions and can then use those predictions to guide its behaviour. The important part is that the model is not just predicting the next observation for the sake of prediction, but learning enough about how the environment behaves that those predictions can actually be used to reason about possible actions.</p>
+
+        <p>Early work in this area relied heavily on compressed latent representations to make this possible. A notable example is the work of Ha and Schmidhuber, where an agent learned to operate within a learned model of the VizDoom environment and was able to train largely inside its own imagined version of the game rather than interacting exclusively with the real environment. More recent approaches such as JEPA pursue the same broader objective, although they differ in how future states are represented and predicted.</p>
+
+        <hr class="section-break">
+
+        <!-- ==================== SECTION 2 ==================== -->
+        <h2 id="sec-2">
+            <span class="section-number">2</span>
+            Ha and Schmidhuber
+        </h2>
+
+        <p>For the rest of this post I'm sticking with the 2018 paper by Ha and Schmidhuber. Their world model is built from three pieces, a Variational Autoencoder, a special RNN variant called an MDN-RNN, and a controller that decides the agent's actions.</p>
+
+        <p><strong>V</strong>'s job is to create a compressed representation of the environment, a lossy reconstruction. You could try training directly on raw frames instead, but that's expensive, and working in a small latent space instead of raw pixels is what makes the rest of the pipeline tractable.</p>
+
+        <p><strong>M</strong> is the MDN-RNN. Its job is to predict the future. Since a lot of environments are stochastic, instead of outputting a single deterministic next state, it outputs a full probability distribution over what the next $z$ could be, a mixture of Gaussians, rather than committing to one prediction. I won't go deep into the VAE or RNN internals here, I've got a <a href="https://ojayballer.github.io/omojire-blog/vae.html">separate post on VAEs</a> where I go through ELBO, the intractability problem, and Kingma and Welling's original paper, plus a beta-VAE I implemented from scratch to actually understand that randomness properly. For now, just think of the RNN as something that takes the current input and the past state and produces the next state, done at every timestep, with the MDN part meaning it outputs a distribution instead of a single deterministic value.</p>
+
+        <p>This was also where I initially got confused by the diagram, because I was thinking about the actions as if they were being passed forward in stages, $a_2$ then $a_3$, before looking at the equations and realising that the action is simply an input to M at each timestep, while the hidden state is what carries information forward through time.</p>
+
+        <p><strong>C</strong> is the smallest piece, and it's not even a neural network, it's a single linear layer with barely any parameters. Because it's so small, the authors train it with CMA-ES instead of gradient descent, an evolutionary strategy that searches directly over that tiny parameter space.</p>
+
+        <p>Putting it together, V takes the raw frames from the environment and compresses each one into $z$. That $z$, along with M's hidden state $h$ and the previous action, feeds into M, which updates $h$ and predicts what the next $z$ is likely to be. C takes the current $z$ and $h$, concatenates them, and outputs the action.</p>
+
+        <div class="equation-block">
+            $$a_t = W_c \begin{bmatrix} z_t \\ h_t \end{bmatrix} + b_c$$
+        </div>
+
+        <p>That action gets sent to the real environment, and the loop continues.</p>
+
+        <figure class="wide bordered">
+            <img src="utils/images/world-models/vmc_architecture.png" alt="Architecture diagram showing V (VAE) and M (MDN-RNN) inside a dashed world model boundary, with C (Controller) as a triangle outside" style="max-width: 520px;">
+            <figcaption><strong>Figure 2.</strong> The V-M-C pipeline. V and M sit inside the dashed "world model" boundary. V compresses observations into $z$, which flows down to M and across to C. M outputs its hidden state $h$ to C. C is drawn as a triangle to emphasise that it is just a single linear layer. Its output action feeds back into both M and the environment.</figcaption>
+        </figure>
+
+        <div class="aside">
+            <p>Right now, this whole loop is still running inside the real environment. The next section is about why that changes, how a dream version of the environment gets built, and how the controller ends up training almost entirely inside it.</p>
+        </div>
+
+        <hr class="section-break">
+
+        <!-- ==================== SECTION 3 ==================== -->
+        <h2 id="sec-3">
+            <span class="section-number">3</span>
+            Training in a Dream
+        </h2>
+
+        <p>In the last section, we talked about training in the real environment, but is it actually realistic? Yes, I think it is mainly a compute problem, because given enough time and compute you could successfully train an agent in the real environment, but it is not efficient enough, especially when the environment itself has to keep rendering observations and simulating everything at every timestep. What we really want is some way of keeping the structure and dynamics of the real environment without having to pay the full cost of interacting with it every time, and that is where the idea of a dream environment comes in.</p>
+
+        <p>The authors demonstrate this with their VizDoom experiment, where the agent is placed in a game in which fireballs are shot at the player and the player has to dodge them by moving left or right. The interesting thing here is that the agent does not actually train in the real VizDoom environment at all. Instead, a random policy is used to play the real game and collect the observations and actions needed to train V and M, so the real environment is basically only being used to provide the data from which the world model can be learned. Once V and M have been trained, the controller is then trained from scratch inside the dream environment, which in this case is the MDN-RNN's learned version of VizDoom, called DoomRNN.</p>
+
+        <figure class="wide bordered">
+            <img src="utils/images/world-models/dream_vs_reality.png" alt="Side-by-side comparison of the training loop in reality versus the dream, showing how M replaces the environment">
+            <figcaption><strong>Figure 3.</strong> Left: the full loop through the real environment, where V, M, C and the Environment are all active. Right: the dream loop, where M replaces the environment entirely. The controller trains against M's predictions in latent space, with no rendering or game engine needed.</figcaption>
+        </figure>
+
+        <figure class="bordered">
+            <img src="utils/images/world-models/vizdoom_screenshot.png" alt="VizDoom Take Cover environment with fireballs approaching the player" style="max-width: 480px;">
+            <figcaption><strong>Figure 4.</strong> The VizDoom "Take Cover" environment. Fireballs are shot at the player who must dodge by moving left or right. The agent trained entirely inside a learned dream version of this environment.</figcaption>
+        </figure>
+
+        <p>It is worth pointing out that this dream-only training setup is specific to the VizDoom experiment, rather than being the only way the paper trains its controllers, but it is probably the clearest demonstration of why having a learned environment can be useful.</p>
+
+        <p>This is where the idea becomes really interesting to me, because the dream environment follows the structure of the real environment, but it is obviously not a perfect copy of it. M has only seen the data collected by the random policy, so it has learned an approximation of the environment's dynamics rather than a perfect simulation of everything that can happen. Fireballs can behave irregularly, the predictions are probabilistic, and the environment generated by M can therefore be more unpredictable than the real game in some situations. The idea is basically that if the controller can learn to make good decisions inside this imperfect and unpredictable version of the environment, then hopefully the resulting policy will also work when it is finally placed back into the real environment.</p>
+
+        <p>And this is exactly what they do. Instead of spending all of the training time running the actual Doom engine, the controller is trained inside DoomRNN using CMA-ES, where it can generate large numbers of imagined rollouts and optimise its policy based on how well it performs in those rollouts. This is also where the computational advantage becomes much more concrete, because DoomRNN operates entirely in latent space, so there is no need to render a new image or run the actual game engine at every step. The dream is essentially much cheaper to run than the real environment because the agent is now working with the compressed representations learned by V and the dynamics learned by M.</p>
+
+        <h3>The Model Exploitation Problem</h3>
+
+        <p>But then I had a question, what if the MDN-RNN doesn't capture the structure of the real environment well enough for the agent to make sensible decisions? What happens then? This is probably one of the biggest risks with the whole idea, because the controller only knows the world through M, so if M has some weird mistake in its predictions, the controller could learn to exploit that mistake instead of learning something that actually works in the real environment. The paper gives a pretty good example of this, where without enough uncertainty the controller can discover actions that cause fireballs to disappear in the dream, essentially finding a way to cheat the imperfections of the model rather than learning how to properly dodge them.</p>
+
+        <p>This is where the temperature parameter $\tau$ comes in. The temperature controls how much randomness is introduced into the predictions of the MDN-RNN, and increasing it makes the dream more uncertain, which makes it harder for the controller to repeatedly exploit some specific mistake in the model. If the controller knows that a particular action will always cause the dream to behave in some convenient but unrealistic way, it can exploit that behaviour, but if the dream is sufficiently stochastic, those exploits become much less reliable and the controller is pushed towards learning behaviour that actually generalises.</p>
+
+        <figure class="wide bordered">
+            <img src="utils/images/world-models/temperature_comparison.png" alt="Side-by-side comparison showing low temperature leading to model exploitation versus high temperature producing robust agent behavior">
+            <figcaption><strong>Figure 5.</strong> The effect of the temperature parameter $\tau$ on dream training. At low temperature the dream is too predictable and the agent finds exploits. At high temperature the stochasticity forces the agent to learn behaviour that transfers to the real environment.</figcaption>
+        </figure>
+
+        <h3>Iterative Training and Curiosity</h3>
+
+        <p>The authors also introduce an iterative training procedure for cases where one pass of data is not enough. If the environment is more complex, a random policy might not collect enough information for M to learn the full distribution of behaviours, so the model can be trained, used to train a controller, and then more data can be collected and used to improve the model again. In other words, instead of assuming that one dataset gives M everything it needs to know about the environment, the process can be repeated so that the world model gradually becomes better.</p>
+
+        <figure class="bordered">
+            <img src="utils/images/world-models/iterative_training.png" alt="Circular flow diagram showing the iterative training loop: collect data, train V and M, train C in dream, deploy C in reality, repeat" style="max-width: 460px;">
+            <figcaption><strong>Figure 6.</strong> The iterative training procedure. Data is collected, used to train V and M, then C is trained inside the dream. C is deployed in the real environment to collect new data, and the cycle repeats. Each pass gives M a richer picture of the environment's dynamics.</figcaption>
+        </figure>
+
+        <p>There's a neat detail attached to that iterative process too. If the agent stays too safe, sticking to areas of the environment it already understands well, M never gets pushed to learn anything new, and the world model can eventually stall out. The paper's fix is to flip the sign of M's prediction loss when running in reality, turning the prediction error into a reward signal instead. High prediction error, meaning the agent has reached a state that M finds difficult to predict, becomes something the agent is incentivized to seek out rather than avoid. It's a small trick, but I think it's a pretty clever way of encouraging exploration, because instead of the agent constantly staying in the parts of the environment it already understands, it is pushed towards unfamiliar situations that can give M more information to learn from.</p>
+
+        <p>That was the part of the paper that made the idea of a world model click for me a little more. The goal isn't to build a perfect copy of reality and then put the agent inside it, because that would defeat a lot of the point. The goal is to build a model that captures enough of the structure and uncertainty of the environment that the agent can learn useful behaviour inside it, and then transfer that behaviour back to the real world. If that works, the expensive part of learning can happen inside the dream rather than through constant interaction with reality.</p>
+
+        <hr class="section-break">
+
+        <!-- ==================== SECTION 4 ==================== -->
+        <h2 id="sec-4">
+            <span class="section-number">4</span>
+            What Comes Next
+        </h2>
+
+        <p>There is one detail about this setup that really stands out when you think about it. Despite the name "World Models", the agent does not actually use its world model when it decides what to do at inference time. The controller $C$ is just a reactive linear layer. At every timestep in the real game, it looks at the state and immediately spits out an action.</p>
+
+        <p>The imagination only happened earlier, during training, when the agent used the world model as a cheap simulator to build up its muscle memory. Once that muscle memory is baked into the controller's weights, the world model is essentially ignored during gameplay. The agent isn't actually pausing to predict multiple futures and pick the best one in real-time. It's riding the bike purely on reflex.</p>
+
+        <p>This is where the next leap in the field comes from. Later architectures, like PlaNet, look at this and ask why the imagination is turned off at runtime. Instead of using the world model just to train a reactive policy, they use the world model to actively plan ahead at every single timestep. That shift from <em>offline training simulator</em> to <em>online planning engine</em> is what I'm looking into next.</p>
+
+        <p>I'm continuing to study these papers and I'll keep writing them up as I go. If you spot something I got wrong, I'd genuinely like to hear about it.</p>
+
+        <!-- ==================== REFERENCES ==================== -->
+        <div class="references" id="sec-refs">
+            <h2>References</h2>
+            <ol>
+                <li>Ha, D. and Schmidhuber, J. (2018). <a href="https://arxiv.org/abs/1803.10122">World Models</a>. arXiv:1803.10122.</li>
+                <li><a href="https://worldmodels.github.io">worldmodels.github.io</a> — the paper's own interactive site, includes the live VizDoom and CarRacing demos.</li>
+            </ol>
+        </div>
+
+    </main>
+
+    <!-- ==================== FOOTER ==================== -->
+    <footer class="article-footer">
+        <div class="footer-line">
+            <a href="https://ojayballer.github.io">Omojire Kuseju</a> · 2026
+        </div>
+    </footer>
+
+</body>
+</html>
