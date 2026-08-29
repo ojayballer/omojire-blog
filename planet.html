@@ -1,0 +1,689 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trying to Understand PlaNet: From World Models to Online Planning</title>
+    <meta name="description" content="reading PlaNet, the paper that teaches a world model to actually plan.">
+    <meta name="author" content="Omojire Kuseju">
+
+    <!-- KaTeX for LaTeX rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        /* ==========================================
+           RESET & BASE
+           ========================================== */
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            font-size: 18px;
+            scroll-behavior: smooth;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+        }
+
+        body {
+            font-family: 'Source Serif 4', 'Georgia', serif;
+            font-weight: 400;
+            line-height: 1.78;
+            color: #1a1a1a;
+            background-color: #fdfdfc;
+            overflow-x: hidden;
+            width: 100%;
+        }
+
+        ::selection {
+            background: rgba(45, 55, 72, 0.15);
+        }
+
+        /* ==========================================
+           LAYOUT
+           ========================================== */
+        .article-header {
+            max-width: 720px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 80px 24px 0;
+        }
+
+        .article-body {
+            max-width: 720px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 0 24px 100px;
+        }
+
+        /* ==========================================
+           HEADER
+           ========================================== */
+        .article-header .overline {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #6b7280;
+            margin-bottom: 20px;
+        }
+
+        .article-header h1 {
+            font-family: 'Source Serif 4', serif;
+            font-size: 2.6rem;
+            font-weight: 700;
+            line-height: 1.15;
+            color: #111;
+            margin-bottom: 24px;
+            letter-spacing: -0.02em;
+        }
+
+        .article-header .subtitle {
+            font-size: 1.15rem;
+            font-weight: 400;
+            line-height: 1.6;
+            color: #4a5568;
+            margin-bottom: 40px;
+            font-style: italic;
+        }
+
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding-bottom: 40px;
+            border-bottom: 1px solid #e5e7eb;
+            margin-bottom: 48px;
+        }
+
+        .article-meta .author-name {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.83rem;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .article-meta .meta-detail {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.78rem;
+            color: #6b7280;
+        }
+
+        .article-meta .meta-detail a {
+            color: #4a5568;
+            text-decoration: none;
+            border-bottom: 1px solid #d1d5db;
+            transition: border-color 0.2s;
+        }
+
+        .article-meta .meta-detail a:hover {
+            border-color: #1a1a1a;
+        }
+
+        .meta-separator {
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: #9ca3af;
+        }
+
+        /* ==========================================
+           TABLE OF CONTENTS
+           ========================================== */
+        .toc {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 28px 32px;
+            margin-bottom: 56px;
+        }
+
+        .toc-title {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #6b7280;
+            margin-bottom: 16px;
+        }
+
+        .toc ol {
+            list-style: none;
+            counter-reset: toc-counter;
+        }
+
+        .toc ol li {
+            counter-increment: toc-counter;
+            margin-bottom: 6px;
+        }
+
+        .toc ol li a {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.83rem;
+            color: #374151;
+            text-decoration: none;
+            transition: color 0.2s;
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+        }
+
+        .toc ol li a::before {
+            content: counter(toc-counter);
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #9ca3af;
+            min-width: 16px;
+        }
+
+        .toc ol li a:hover {
+            color: #111;
+        }
+
+        /* ==========================================
+           TYPOGRAPHY
+           ========================================== */
+        .article-body p {
+            margin-bottom: 1.4em;
+            font-size: 1rem;
+            color: #2d3748;
+        }
+
+        .article-body h2 {
+            font-family: 'Source Serif 4', serif;
+            font-size: 1.7rem;
+            font-weight: 600;
+            color: #111;
+            margin-top: 64px;
+            margin-bottom: 24px;
+            line-height: 1.25;
+            letter-spacing: -0.01em;
+        }
+
+        .article-body h2 .section-number {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.83rem;
+            font-weight: 600;
+            color: #9ca3af;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .article-body h3 {
+            font-family: 'Source Serif 4', serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-top: 40px;
+            margin-bottom: 16px;
+            line-height: 1.35;
+        }
+
+        /* ==========================================
+           LINKS
+           ========================================== */
+        .article-body a {
+            color: #1a1a1a;
+            text-decoration: none;
+            border-bottom: 1.5px solid #cbd5e0;
+            transition: border-color 0.2s ease;
+        }
+
+        .article-body a:hover {
+            border-color: #1a1a1a;
+        }
+
+        /* ==========================================
+           FIGURES
+           ========================================== */
+        figure {
+            margin: 48px 0;
+            text-align: center;
+        }
+
+        figure.wide {
+            margin-left: -80px;
+            margin-right: -80px;
+        }
+
+        figure img {
+            max-width: 100% !important;
+            height: auto;
+            border-radius: 4px;
+        }
+
+        figure.bordered img {
+            border: 1px solid #e5e7eb;
+        }
+
+        figcaption {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.78rem;
+            color: #6b7280;
+            margin-top: 14px;
+            line-height: 1.55;
+            max-width: 560px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        figcaption strong {
+            color: #374151;
+            font-weight: 600;
+        }
+
+        /* ==========================================
+           EQUATIONS
+           ========================================== */
+        .equation-block {
+            background: #f8f9fa;
+            border-left: 3px solid #d1d5db;
+            padding: 20px 28px;
+            margin: 32px 0;
+            border-radius: 0 4px 4px 0;
+            overflow-x: auto;
+        }
+
+        .equation-block .katex-display {
+            margin: 0;
+        }
+
+        /* ==========================================
+           ASIDE / CALLOUT
+           ========================================== */
+        .aside {
+            background: #f0f4f8;
+            border-left: 3px solid #4a5568;
+            padding: 20px 24px;
+            margin: 36px 0;
+            border-radius: 0 4px 4px 0;
+            font-size: 0.92rem;
+            color: #2d3748;
+            line-height: 1.65;
+        }
+
+        .aside p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* ==========================================
+           HORIZONTAL RULE
+           ========================================== */
+        .section-break {
+            border: none;
+            height: 1px;
+            background: #e5e7eb;
+            margin: 64px 0;
+        }
+
+        /* ==========================================
+           REFERENCES
+           ========================================== */
+        .references {
+            margin-top: 64px;
+            padding-top: 40px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .references h2 {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.83rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #6b7280;
+            margin-top: 0;
+            margin-bottom: 24px;
+        }
+
+        .references ol {
+            list-style: none;
+            counter-reset: ref-counter;
+            padding: 0;
+        }
+
+        .references ol li {
+            counter-increment: ref-counter;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.83rem;
+            color: #4a5568;
+            margin-bottom: 12px;
+            padding-left: 28px;
+            position: relative;
+            line-height: 1.55;
+        }
+
+        .references ol li::before {
+            content: counter(ref-counter) ".";
+            position: absolute;
+            left: 0;
+            font-weight: 600;
+            color: #9ca3af;
+        }
+
+        .references ol li a {
+            color: #4a5568;
+            border-bottom: 1px solid #d1d5db;
+            text-decoration: none;
+            transition: border-color 0.2s;
+        }
+
+        .references ol li a:hover {
+            border-color: #4a5568;
+        }
+
+        /* ==========================================
+           FOOTER
+           ========================================== */
+        .article-footer {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 24px 80px;
+        }
+
+        .footer-line {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.78rem;
+            color: #9ca3af;
+            text-align: center;
+            padding-top: 40px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .footer-line a {
+            color: #6b7280;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+
+        .footer-line a:hover {
+            border-color: #6b7280;
+        }
+
+        /* ==========================================
+           RESPONSIVE
+           ========================================== */
+        @media (max-width: 840px) {
+            figure.wide {
+                margin-left: 0;
+                margin-right: 0;
+            }
+        }
+
+        @media (max-width: 640px) {
+            html {
+                font-size: 16px;
+            }
+
+            .article-header {
+                padding: 48px 20px 0;
+            }
+
+            .article-header h1 {
+                font-size: 2rem;
+            }
+
+            .article-body {
+                padding: 0 20px 80px;
+            }
+
+            .toc {
+                padding: 20px 24px;
+            }
+
+            .equation-block {
+                padding: 16px 20px;
+            }
+
+            .article-footer {
+                padding: 0 20px 60px;
+            }
+        }
+
+        /* ==========================================
+           KATEX OVERRIDES
+           ========================================== */
+        .katex-display {
+            margin: 1em 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        .katex {
+            font-size: 1.05em;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ==================== HEADER ==================== -->
+    <header class="article-header">
+        <div class="overline">Research Notes</div>
+        <h1>Trying to Understand PlaNet: From World Models to Online Planning</h1>
+        <p class="subtitle">reading PlaNet, the paper that teaches a world model to actually plan.</p>
+        <div class="article-meta">
+            <span class="author-name">Omojire Kuseju</span>
+            <span class="meta-separator"></span>
+            <span class="meta-detail">August 2026</span>
+            <span class="meta-separator"></span>
+            <span class="meta-detail"><a href="https://x.com/ojbaby_11">𝕏</a></span>
+        </div>
+    </header>
+
+    <!-- ==================== BODY ==================== -->
+    <main class="article-body">
+
+        <!-- TABLE OF CONTENTS -->
+        <nav class="toc" id="toc">
+            <div class="toc-title">Contents</div>
+            <ol>
+                <li><a href="#sec-1">When a World Model Isn't Enough</a></li>
+                <li><a href="#sec-2">Partial Information</a></li>
+                <li><a href="#sec-3">Building a Model That Remembers and Imagines</a></li>
+                <li><a href="#sec-4">How the Agent Decides</a></li>
+                <li><a href="#sec-5">Looking Ahead</a></li>
+                <li><a href="#sec-refs">References</a></li>
+            </ol>
+        </nav>
+
+        <!-- ==================== SECTION 1 ==================== -->
+        <h2 id="sec-1">
+            <span class="section-number">1</span>
+            When a World Model Isn't Enough
+        </h2>
+
+        <p>In the <a href="https://ojayballer.github.io/omojire-blog/world-models.html">last blog</a>, I talked about the World Models paper by Ha and Schmidhuber, where I concluded by pointing out one limitation of their approach. Although the model learns a world model of the environment, the controller does not actually use that world model to plan its actions at inference time. Instead, when the agent is interacting with the environment, the controller takes the current latent state and uses its learned policy to decide which action to take, rather than using the world model to simulate different possible futures and compare the outcomes before deciding what to do.</p>
+
+        <p>PlaNet tackles this directly. It is a model-based reinforcement learning method, meaning that instead of only learning which actions to take, the agent also learns a model of how the environment behaves and can use that model to reason about possible future outcomes before acting. That is essentially what makes it model-based rather than model-free. A model-free agent learns which actions to take purely through trial and error, without ever building an explicit model of how the environment works.</p>
+
+        <p>Ha and Schmidhuber's World Models can still be considered a model-based approach because the agent learns a model of the environment and uses that learned model during the training of its controller, but the important distinction is what happens when the agent is actually interacting with the environment. The World Models controller uses its learned policy to map the current latent state to an action, whereas PlaNet uses its learned dynamics model to imagine possible future trajectories, evaluate their predicted rewards, and use those predictions to decide which action to take. Unlike approaches that use a separate policy or value network for action selection, PlaNet does not use a policy or value network; instead, it relies on online planning to select its actions.</p>
+
+        <p>What I find interesting about this is that the agent is no longer just reacting. It can ask itself what is likely to happen if it takes a particular action, consider different possible action sequences, and then pick the one that looks best based on the outcomes it predicts. All of this planning happens in latent space too, not in pixel space, so the agent never has to reconstruct full images of the future just to decide what to do.</p>
+
+        <p>The other advantage is sample efficiency. Because the agent has a model of the environment, it does not have to learn the consequences of every action entirely through real interactions. It can reason about outcomes internally, and the model itself keeps improving as the agent collects more real experience.</p>
+
+        <p>The interesting question then becomes how do you build a model that is good enough to predict the future and use those predictions for planning?</p>
+
+        <p>That is what I want to explore in this blog. Danijar Hafner and the Google DeepMind team tackled this exact problem. Their approach is noticeably more rigorous and technically dense than Ha and Schmidhuber's World Models, which means understanding PlaNet requires getting directly into the underlying math.</p>
+
+        <figure class="wide bordered">
+            <img src="utils/images/planet/control_tasks.png" alt="Six continuous control tasks from the DeepMind control suite used to evaluate PlaNet">
+            <figcaption><strong>Figure 1.</strong> The six DeepMind Control Suite tasks PlaNet is evaluated on. From left to right: Cartpole, Reacher, Cheetah, Finger, Cup, and Walker. The agent receives only 64×64 pixel observations.</figcaption>
+        </figure>
+
+        <hr class="section-break">
+
+        <!-- ==================== SECTION 2 ==================== -->
+        <h2 id="sec-2">
+            <span class="section-number">2</span>
+            Partial Information
+        </h2>
+
+        <p>POMDP stands for Partially Observable Markov Decision Process, and it is the framework used to formulate the decision-making problem in PlaNet. It is basically a variant of a Markov Decision Process, but the true state of the environment is not directly available to the agent. Instead, at every timestep, the agent receives an observation $o_t$ from the environment, which gives it only partial information about what is happening in the environment.</p>
+
+
+
+        <p>So the agent cannot just look at what it sees right now and know exactly what state the environment is in. It has to piece that together from the current observation and everything it has seen before, building an internal representation over time. In PlaNet, this internal representation is a latent state that the model can use to reason about what is happening even though the true state is hidden.</p>
+
+        <p>This is where the notation in the paper needs to be understood carefully. In the POMDP formulation, the state $s_t$ refers to the true underlying state of the environment, but this state is hidden from the agent. The model therefore has to infer its own latent state from the information available to it. To make this distinction clearer, I will call the model's inferred latent state $\hat{s}_t$. This $\hat{s}_t$ is built from the current observation, previous actions, and the information carried from previous timesteps, rather than being the true state itself.</p>
+
+        <p>Once the agent has this latent representation, PlaNet can use its learned dynamics model to imagine what might happen after taking different actions. To search through possible action sequences, it uses an algorithm called the Cross Entropy Method (CEM), which evaluates these imagined trajectories using the learned model's predicted outcomes and rewards. The agent then selects the first action from the sequence that is predicted to perform best, executes it in the real environment, receives a new observation, and repeats the process.</p>
+
+        <p>The agent is never handed the true state or told what will happen next. Instead, it has to maintain its own latent representation and use its learned model to reason about what could happen next. This is where the Recurrent State Space Model (RSSM) becomes important, because it is the model PlaNet uses to maintain and predict this latent state, which is what I will be getting into next.</p>
+
+        <hr class="section-break">
+
+        <!-- ==================== SECTION 3 ==================== -->
+        <h2 id="sec-3">
+            <span class="section-number">3</span>
+            Building a Model That Remembers and Imagines
+        </h2>
+
+        <p>The RSSM is PlaNet's learned dynamics model, and it has both a deterministic and a stochastic component.</p>
+
+        <h3>Why was this model created?</h3>
+
+        <p>From Ha and Schmidhuber's model we know they used a recurrent neural network (RNN). The deterministic nature of the RNN was not really a problem for their setup because the controller did not need to compare multiple imagined futures directly when selecting actions at inference time. PlaNet, on the other hand, needs to evaluate different possible futures during online planning, which makes representing uncertainty and multiple possible futures much more important.</p>
+
+        <p>The researchers could use a stochastic state space model instead, where the latent state is sampled from a probability distribution, but a purely stochastic model makes it difficult to reliably remember information over multiple timesteps because it does not have a deterministic recurrent component carrying information through time.</p>
+
+        <p>I think what the researchers really did here is genius level. They combined the deterministic and stochastic counterparts and called it a Recurrent State Space Model (RSSM). That combination solves two problems at once. The stochastic part lets the model represent multiple possible futures, and the deterministic part lets it hold onto information across many timesteps.</p>
+
+        <figure class="wide bordered">
+            <img src="utils/images/planet/model_comparison.png" alt="Three model architectures side by side: deterministic RNN, stochastic SSM, and the combined RSSM">
+            <figcaption><strong>Figure 2.</strong> The three dynamics model variants. (a) A purely deterministic model (RNN) with hidden states $h_t$. (b) A purely stochastic model (SSM) with sampled states $s_t$. (c) The RSSM, which combines both, giving it memory through $h_t$ and uncertainty through $s_t$.</figcaption>
+        </figure>
+
+        <p>I like to think of the deterministic counterpart as being similar to a Recurrent Neural Network, while the stochastic counterpart is similar to how a variational autoencoder samples a latent variable from a probability distribution. In fact, an encoder is used to infer the stochastic state from the current observation and the deterministic state, while the deterministic component of the RSSM is implemented as a recurrent neural network that carries information from previous timesteps.</p>
+
+        <p>I think the RSSM is really the core of PlaNet. It gives the dynamics model both memory and uncertainty, which is exactly what you need if you want to imagine future trajectories and plan over them.</p>
+
+        <p>What I found particularly interesting was the result of the different model variants in the experiments. Looking at the results, the ordering was the purely deterministic model first, the purely stochastic model second, and the full RSSM model last, with the RSSM performing the best. From the graph, I also noticed that the stochastic model performed better than the purely deterministic model, which makes the importance of the stochastic component even more interesting when thinking about why PlaNet needs to model multiple possible futures.</p>
+
+        <figure class="wide bordered">
+            <img src="utils/images/planet/ablation_graph.png" alt="Graph comparing test performance of deterministic, stochastic, and RSSM models across six tasks">
+            <figcaption><strong>Figure 3.</strong> The ablation results comparing model designs. The full RSSM model consistently achieves the highest test performance across the control tasks compared to purely deterministic or purely stochastic models.</figcaption>
+        </figure>
+
+        <h3>How did they combine the components?</h3>
+
+        <p>At this point, the notation in the paper changes slightly. In the RSSM formulation, the authors use $s_t$ for the stochastic latent state. I will use that notation here, while $\hat{s}_t$ was only introduced earlier to distinguish the model's latent state from the true hidden state of the environment.</p>
+
+        <p>The RSSM splits the latent state into two components, the deterministic state $h_t$ and the stochastic state $s_t$. The deterministic state is updated using the previous deterministic state, the previous stochastic state, and the previous action</p>
+
+        <div class="equation-block">
+            $$h_t = f(h_{t-1}, s_{t-1}, a_{t-1})$$
+        </div>
+
+        <p>where $f$ is implemented as a recurrent neural network.</p>
+
+        <p>The stochastic state is then sampled from a probability distribution conditioned on the deterministic state</p>
+
+        <div class="equation-block">
+            $$s_t \sim p(s_t \mid h_t)$$
+        </div>
+
+        <p>When a real observation $o_t$ is available, an encoder is used to infer an approximate posterior for the stochastic state</p>
+
+        <div class="equation-block">
+            $$s_t \sim q(s_t \mid h_t, o_t)$$
+        </div>
+
+        <p>So when a real observation comes in, the model can use it to figure out what its current stochastic state should be. During imagination, there is no future observation available, so the model instead uses the learned distribution</p>
+
+        <div class="equation-block">
+            $$p(s_t \mid h_t)$$
+        </div>
+
+        <p>to sample the stochastic state and continue predicting the latent dynamics.</p>
+
+        <p>The deterministic and stochastic states together form the latent state used by the model, while the observation and reward models use both components to predict the observation and reward</p>
+
+        <div class="equation-block">
+            $$o_t \sim p(o_t \mid h_t, s_t) \qquad r_t \sim p(r_t \mid h_t, s_t)$$
+        </div>
+
+        <p>The observation model is mainly used during training, where its predicted observation is compared against the real observation to help train the world model. It is not needed during planning, because PlaNet does not need to reconstruct future pixels in order to evaluate an imagined trajectory. Instead, it can remain entirely in latent space, using the RSSM to predict future latent states and the reward model to predict the rewards associated with them.</p>
+
+        <figure class="wide bordered">
+            <img src="utils/images/planet/rssm_architecture.png" alt="RSSM architecture showing deterministic path with h states and stochastic path with s states across timesteps">
+            <figcaption><strong>Figure 4.</strong> The RSSM unrolled across timesteps. The deterministic path ($h_t$, blue) carries information forward through time. The stochastic path ($s_t$, purple) is sampled at each step. When observations are available, the encoder (dashed arrows from $o_t$) infers the posterior. The observation and reward models predict $o_t$ and $r_t$ from both components.</figcaption>
+        </figure>
+
+        <p>Together, that means the RSSM can ground itself in real observations when they are available, and then roll forward on its own when it needs to imagine what happens next.</p>
+
+        <p>The paper also explores a technique called latent overshooting. The idea is to train the model not only to predict the latent state at the next timestep, but also to make accurate predictions several steps into the future. This is useful because PlaNet eventually uses the learned dynamics to imagine multi-step trajectories during planning, although the final RSSM based agent did not require it.</p>
+
+        <hr class="section-break">
+
+        <!-- ==================== SECTION 4 ==================== -->
+        <h2 id="sec-4">
+            <span class="section-number">4</span>
+            How the Agent Decides
+        </h2>
+
+        <p>For the actual planning, PlaNet uses the Cross Entropy Method (CEM).</p>
+
+        <p>CEM starts by searching for a good sequence of actions. It proposes several possible action sequences from the current latent state. The RSSM then rolls the latent state forward for each of these sequences, and the reward model predicts the rewards they would produce.</p>
+
+        <p>CEM looks at the predicted returns and then uses the better performing sequences to guide the next round of samples. It keeps repeating this process until it has a good estimate of which action sequence is likely to give the highest reward.</p>
+
+        <p>The important part is that PlaNet does not actually execute the whole sequence it finds. It only takes the first action and sends it to the real environment. The environment then gives it a new observation and reward, and the agent uses that new information to update its latent state and plan again.</p>
+
+        <p>So the planning process is basically the model asking itself what might happen under different actions, choosing the action sequence that looks best, and then checking what happened once the first action is taken in the real environment.</p>
+
+        <hr class="section-break">
+
+        <!-- ==================== SECTION 5 ==================== -->
+        <h2 id="sec-5">
+            <span class="section-number">5</span>
+            Looking Ahead
+        </h2>
+
+        <p>I would be honest, going through the PlaNet paper was harder for me than the Ha and Schmidhuber paper. I had to read it two times, and I would even say it was a little easier for me because I already knew the theory of variational inference, ELBO, KL divergence, and so on. Even with that background, the hard part was being able to connect all the pieces together. It took me some time, but eventually things started to click.</p>
+
+        <p>I am looking forward to reading the Dreamer paper. One limitation of PlaNet is that it is computationally expensive. CEM needs to repeatedly search through many possible action sequences, which makes online planning expensive. Other model-based RL methods like Dreamer approach this differently by learning a policy from imagined trajectories instead of having to perform this kind of search at every decision.</p>
+
+        <p>If you spot something I got wrong, I'd genuinely like to hear about it.</p>
+
+        <!-- ==================== REFERENCES ==================== -->
+        <div class="references" id="sec-refs">
+            <h2>References</h2>
+            <ol>
+                <li>Hafner, D., Lillicrap, T., Fischer, I., Villegas, R., Ha, D., Lee, H. and Davidson, J. (2019). <a href="https://arxiv.org/abs/1811.04551">Learning Latent Dynamics for Planning from Pixels</a>. arXiv:1811.04551.</li>
+                <li><a href="https://planetrl.github.io">planetrl.github.io</a> — the paper's interactive project page.</li>
+                <li>Ha, D. and Schmidhuber, J. (2018). <a href="https://arxiv.org/abs/1803.10122">World Models</a>. arXiv:1803.10122.</li>
+            </ol>
+        </div>
+
+    </main>
+
+    <!-- ==================== FOOTER ==================== -->
+    <footer class="article-footer">
+        <div class="footer-line">
+            <a href="https://ojayballer.github.io">Omojire Kuseju</a> · 2026
+        </div>
+    </footer>
+
+</body>
+</html>
