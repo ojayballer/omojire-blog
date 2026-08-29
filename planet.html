@@ -627,7 +627,7 @@
 
         <figure class="wide bordered">
             <img src="utils/images/planet/rssm_architecture.png" alt="RSSM architecture showing deterministic path with h states and stochastic path with s states across timesteps">
-            <figcaption><strong>Figure 4.</strong> The RSSM unrolled across timesteps. The deterministic path ($h_t$, blue) carries information forward through time. The stochastic path ($s_t$, purple) is sampled at each step. When observations are available, the encoder (dashed arrows from $o_t$) infers the posterior. The observation and reward models predict $o_t$ and $r_t$ from both components.</figcaption>
+            <figcaption><strong>Figure 4.</strong> The RSSM unrolled across timesteps. The deterministic path $h_t$ carries information forward through time. The stochastic path $s_t$ is sampled at each step. When observations are available, the encoder (dashed arrows from $o_t$) infers the posterior. The observation and reward models predict $o_t$ and $r_t$ from both components.</figcaption>
         </figure>
 
         <p>Together, that means the RSSM can ground itself in real observations when they are available, and then roll forward on its own when it needs to imagine what happens next.</p>
