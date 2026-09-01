@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dreamer: Learning From Futures That Never Happened</title>
+    <meta name="description" content="Trading search for imagination.">
+    <meta name="author" content="Omojire Kuseju">
+
+    <!-- KaTeX for LaTeX rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        /* ==========================================
+           RESET & BASE
+           ========================================== */
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            font-size: 18px;
+            scroll-behavior: smooth;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+            -webkit-hyphens: none;
+            -moz-hyphens: none;
+            hyphens: none;
+        }
+
+        body {
+            font-family: 'Source Serif 4', 'Georgia', serif;
+            font-weight: 400;
+            line-height: 1.78;
+            color: #1a1a1a;
+            background-color: #fdfdfc;
+            overflow-x: hidden;
+            width: 100%;
+        }
+
+        ::selection {
+            background: rgba(45, 55, 72, 0.15);
+        }
+
+        /* ==========================================
+           LAYOUT
+           ========================================== */
+        .article-header {
+            max-width: 720px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 80px 24px 0;
+        }
+
+        .article-body {
+            max-width: 720px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 0 24px 100px;
+        }
+
+        /* ==========================================
+           HEADER
+           ========================================== */
+        .article-header .overline {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #6b7280;
+            margin-bottom: 20px;
+        }
+
+        .article-header h1 {
+            font-family: 'Source Serif 4', serif;
+            font-size: 2.6rem;
+            font-weight: 700;
+            line-height: 1.15;
+            color: #111;
+            margin-bottom: 24px;
+            letter-spacing: -0.02em;
+        }
+
+        .article-header .subtitle {
+            font-size: 1.15rem;
+            font-weight: 400;
+            line-height: 1.6;
+            color: #4a5568;
+            margin-bottom: 40px;
+            font-style: italic;
+        }
+
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding-bottom: 40px;
+            border-bottom: 1px solid #e5e7eb;
+            margin-bottom: 48px;
+        }
+
+        .article-meta .author-name {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.83rem;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .article-meta .meta-detail {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.78rem;
+            color: #6b7280;
+        }
+
+        .article-meta .meta-detail a {
+            color: #4a5568;
+            text-decoration: none;
+            border-bottom: 1px solid #d1d5db;
+            transition: border-color 0.2s;
+        }
+
+        .article-meta .meta-detail a:hover {
+            border-color: #1a1a1a;
+        }
+
+        .meta-separator {
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: #9ca3af;
+        }
+
+        /* ==========================================
+           TABLE OF CONTENTS
+           ========================================== */
+        .toc {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 28px 32px;
+            margin-bottom: 56px;
+        }
+
+        .toc-title {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #6b7280;
+            margin-bottom: 16px;
+        }
+
+        .toc ol {
+            list-style: none;
+            counter-reset: toc-counter;
+        }
+
+        .toc ol li {
+            counter-increment: toc-counter;
+            margin-bottom: 6px;
+        }
+
+        .toc ol li a {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.83rem;
+            color: #374151;
+            text-decoration: none;
+            transition: color 0.2s;
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+        }
+
+        .toc ol li a::before {
+            content: counter(toc-counter);
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #9ca3af;
+            min-width: 16px;
+        }
+
+        .toc ol li a:hover {
+            color: #111;
+        }
+
+        /* ==========================================
+           TYPOGRAPHY
+           ========================================== */
+        .article-body p {
+            margin-bottom: 1.4em;
+            font-size: 1rem;
+            color: #2d3748;
+        }
+
+        .article-body h2 {
+            font-family: 'Source Serif 4', serif;
+            font-size: 1.7rem;
+            font-weight: 600;
+            color: #111;
+            margin-top: 64px;
+            margin-bottom: 24px;
+            line-height: 1.25;
+            letter-spacing: -0.01em;
+        }
+
+        .article-body h2 .section-number {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.83rem;
+            font-weight: 600;
+            color: #9ca3af;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .article-body h3 {
+            font-family: 'Source Serif 4', serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-top: 40px;
+            margin-bottom: 16px;
+            line-height: 1.35;
+        }
+
+        /* ==========================================
+           LINKS
+           ========================================== */
+        .article-body a {
+            color: #1a1a1a;
+            text-decoration: none;
+            border-bottom: 1.5px solid #cbd5e0;
+            transition: border-color 0.2s ease;
+        }
+
+        .article-body a:hover {
+            border-color: #1a1a1a;
+        }
+
+        /* ==========================================
+           FIGURES
+           ========================================== */
+        figure {
+            margin: 48px 0;
+            text-align: center;
+        }
+
+        figure.wide {
+            margin-left: -80px;
+            margin-right: -80px;
+        }
+
+        figure img {
+            max-width: 100% !important;
+            height: auto;
+            border-radius: 4px;
+        }
+
+        figure.bordered img {
+            border: 1px solid #e5e7eb;
+        }
+
+        figcaption {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.78rem;
+            color: #6b7280;
+            margin-top: 14px;
+            line-height: 1.55;
+            max-width: 560px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        figcaption strong {
+            color: #374151;
+            font-weight: 600;
+        }
+
+        /* ==========================================
+           EQUATIONS
+           ========================================== */
+        .equation-block {
+            background: #f8f9fa;
+            border-left: 3px solid #d1d5db;
+            padding: 20px 28px;
+            margin: 32px 0;
+            border-radius: 0 4px 4px 0;
+            overflow-x: auto;
+        }
+
+        .equation-block .katex-display {
+            margin: 0;
+        }
+
+        /* ==========================================
+           ASIDE / CALLOUT
+           ========================================== */
+        .aside {
+            background: #f0f4f8;
+            border-left: 3px solid #4a5568;
+            padding: 20px 24px;
+            margin: 36px 0;
+            border-radius: 0 4px 4px 0;
+            font-size: 0.92rem;
+            color: #2d3748;
+            line-height: 1.65;
+        }
+
+        .aside p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* ==========================================
+           HORIZONTAL RULE
+           ========================================== */
+        .section-break {
+            border: none;
+            height: 1px;
+            background: #e5e7eb;
+            margin: 64px 0;
+        }
+
+        /* ==========================================
+           REFERENCES
+           ========================================== */
+        .references {
+            margin-top: 64px;
+            padding-top: 40px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .references h2 {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.83rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #6b7280;
+            margin-top: 0;
+            margin-bottom: 24px;
+        }
+
+        .references ol {
+            list-style: none;
+            counter-reset: ref-counter;
+            padding: 0;
+        }
+
+        .references ol li {
+            counter-increment: ref-counter;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.83rem;
+            color: #4a5568;
+            margin-bottom: 12px;
+            padding-left: 28px;
+            position: relative;
+            line-height: 1.55;
+            overflow-wrap: break-word;
+            word-break: break-word;
+            -webkit-hyphens: none;
+            -moz-hyphens: none;
+            hyphens: none;
+        }
+
+        .references ol li::before {
+            content: counter(ref-counter) ".";
+            position: absolute;
+            left: 0;
+            font-weight: 600;
+            color: #9ca3af;
+        }
+
+        .references ol li a {
+            color: #4a5568;
+            border-bottom: 1px solid #d1d5db;
+            text-decoration: none;
+            transition: border-color 0.2s;
+        }
+
+        .references ol li a:hover {
+            border-color: #4a5568;
+        }
+
+        /* ==========================================
+           FOOTER
+           ========================================== */
+        .article-footer {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 24px 80px;
+        }
+
+        .footer-line {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.78rem;
+            color: #9ca3af;
+            text-align: center;
+            padding-top: 40px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .footer-line a {
+            color: #6b7280;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+
+        .footer-line a:hover {
+            border-color: #6b7280;
+        }
+
+        /* ==========================================
+           RESPONSIVE
+           ========================================== */
+        @media (max-width: 840px) {
+            figure.wide {
+                margin-left: 0;
+                margin-right: 0;
+            }
+        }
+
+        @media (max-width: 640px) {
+            html {
+                font-size: 16px;
+            }
+
+            .article-header {
+                padding: 48px 20px 0;
+            }
+
+            .article-header h1 {
+                font-size: 2rem;
+            }
+
+            .article-body {
+                padding: 0 20px 80px;
+            }
+
+            .toc {
+                padding: 20px 24px;
+            }
+
+            .equation-block {
+                padding: 16px 20px;
+            }
+
+            .article-footer {
+                padding: 0 20px 60px;
+            }
+        }
+
+        /* ==========================================
+           KATEX OVERRIDES
+           ========================================== */
+        .katex-display {
+            margin: 1em 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        .katex {
+            font-size: 1.05em;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ==================== HEADER ==================== -->
+    <header class="article-header">
+        <div class="overline">Research Notes</div>
+        <h1>Dreamer: Learning From Futures That Never Happened</h1>
+        <p class="subtitle">Trading search for imagination.</p>
+        <div class="article-meta">
+            <span class="author-name">Omojire Kuseju</span>
+            <span class="meta-separator"></span>
+            <span class="meta-detail">September 2026</span>
+            <span class="meta-separator"></span>
+            <span class="meta-detail"><a href="https://x.com/ojbaby_11">&#x1D54F;</a></span>
+        </div>
+    </header>
+
+    <!-- ==================== BODY ==================== -->
+    <main class="article-body">
+
+        <!-- TABLE OF CONTENTS -->
+        <nav class="toc" id="toc">
+            <div class="toc-title">Contents</div>
+            <ol>
+                <li><a href="#sec-1">No More Searching</a></li>
+                <li><a href="#sec-2">Running Without Looking</a></li>
+                <li><a href="#sec-3">Experience That Never Happened</a></li>
+                <li><a href="#sec-4">Just Act</a></li>
+                <li><a href="#sec-5">Looking Ahead</a></li>
+                <li><a href="#sec-refs">References</a></li>
+            </ol>
+        </nav>
+
+        <!-- ==================== SECTION 1 ==================== -->
+        <h2 id="sec-1">
+            <span class="section-number">1</span>
+            No More Searching
+        </h2>
+
+        <p>Another day, another deep dive. Today, I'm breaking down a fascinating paper, and if you've seen the title, you should already be curious. How do you learn from futures that never happened? What even counts as a "future" in this context? Let's get right into it.</p>
+
+        <p>My last blog post covered <a href="https://ojayballer.github.io/omojire-blog/planet.html">PlaNet</a> and how a world model does online planning. The agent evaluates possible actions, projects action sequences, and uses its learned world model to predict which path yields the best reward. Sounds great, right? But the way PlaNet goes about this is brutal. It relies on the Cross Entropy Method, an optimization algorithm that searches through possible action sequences. The agent repeatedly samples, refines its search, executes the first action, receives a new observation, and then repeats the entire process. It is painstakingly slow and computationally heavy.</p>
+
+        <p>For comparison, the Dreamer paper reports a training time of about 3 hours per $10^6$ environment steps on the Control Suite, compared to about 11 hours for PlaNet. That gap is basically the cost of PlaNet's search, and it will make more sense once I get into why Dreamer does not need to search at all.</p>
+
+        <p>Dreamer takes a completely different approach. It eliminates the Cross Entropy Method and, with it, the need for online planning during inference. It still works within a POMDP, still uses a stochastic latent state, and still relies on the Recurrent State Space Model. What changes is what it does with that world model.</p>
+
+        <p>So if we remove online planning, how does the agent know which action to take? Wasn't that the whole point of PlaNet?</p>
+
+        <p>Instead of searching for the best action at inference time, Dreamer uses the world model during training to generate imagined futures and learns which actions are good from those simulated experiences. The world model is still doing the heavy lifting, but instead of using it to search for an action every time the agent acts, Dreamer uses it to train a policy that already knows what to do.</p>
+
+        <p>The researchers realized that because the RSSM is a neural network, they could backpropagate through the imagined trajectories it generates. This allows them to update the network weights directly, instead of relying on brute-force Cross Entropy search. This is where the Actor and Critic come in. The Actor learns which actions to take, while the Critic learns how valuable those imagined states are. Once they are trained, the Actor can directly output an action from the current state during inference. No search, no CEM, no planning loop.</p>
+
+        <p>Reading this paper really enlightened me and I enjoyed it. Stay with me, because this is going to be a fun one!</p>
+
+        <figure class="wide bordered">
+            <img src="utils/images/dreamer/dreamer_overview.png" alt="Dreamer high-level overview showing Dataset of Experience, Learned Latent Dynamics, and Value and Action Learned by Latent Imagination">
+            <figcaption><strong>Figure 1.</strong> Dreamer learns a world model from past experience and efficiently learns farsighted behaviors in its latent space by predicting both dynamics and rewards.</figcaption>
+        </figure>
+
+        <hr class="section-break">
+
+        <!-- ==================== SECTION 2 ==================== -->
+        <h2 id="sec-2">
+            <span class="section-number">2</span>
+            Running Without Looking
+        </h2>
+
+        <p>Apart from eliminating online planning, Dreamer can learn long-horizon behaviour through latent imagination. By planning horizon, I mean how far into the future the agent tries to predict the consequences of its actions before making a decision. In PlaNet, this means searching through a limited number of future steps with CEM, because extending that search further makes the computation more expensive. Dreamer sidesteps this entirely. During training, it uses the world model to imagine future trajectories in latent space, so the agent can learn about longer-term consequences without paying that search cost at every interaction. It is not that it imagines further ahead than PlaNet could search, the imagination horizon is still fixed at a set number of steps, it is that the value model picks up where the imagined rollout stops and carries the long-term information from there.</p>
+
+        <p>The RSSM, encoder, decoder, and reward predictor are all trained together on real trajectories. During real interaction, the model receives observations from the environment and uses them to maintain its current latent state. But during imagination, the model can start from a latent state inferred from real experience and continue the trajectory using its learned dynamics without receiving new observations from the environment. Each predicted latent state becomes the starting point for the next step, and the entire trajectory remains in latent space.</p>
+
+        <p>Think about what that means concretely. Say the agent just saw the walker mid-stride. It encodes that observation into a latent state grounded in reality. Now, without taking another step in the real environment, the RSSM rolls forward. What would the next latent state look like if the agent pushed harder with the left leg? What about easing off? Each of those predicted states becomes the starting point for another prediction, and another, building out a full imagined trajectory from a single real moment. The environment never provides a correction during this process, the model is running entirely on its own predictions.</p>
+
+        <p>Part of what the world model is trained to do is make sure the prediction the RSSM makes before seeing an observation matches the prediction it makes after seeing it. That matters because during imagination there is no observation coming in, only the prior prediction, so the two need to already agree by the time training is done.</p>
+
+        <figure class="wide bordered">
+            <img src="utils/images/dreamer/learn_dynamics.png" alt="Diagram of learning latent dynamics from experience, showing observations encoding into states and predicting next states and rewards">
+            <figcaption><strong>Figure 2.</strong> Learning dynamics from experience. The world model is trained to predict future states and rewards from past observations.</figcaption>
+        </figure>
+
+        <p>So now we have a world model that can take a state grounded in reality and continue generating a future entirely inside latent space. The next question is how Dreamer actually learns from those imagined futures, which is what I will get into next.</p>
+
+        <hr class="section-break">
+
+        <!-- ==================== SECTION 3 ==================== -->
+        <h2 id="sec-3">
+            <span class="section-number">3</span>
+            Experience That Never Happened
+        </h2>
+
+        <p>The Actor and Critic work during latent imagination, and the goal here is to train the Actor to output actions that lead to high long-term reward instead of having to search for those actions every time the agent interacts with the environment. The Critic, also called the value model, is used during training to estimate how valuable the imagined states are, and this information is used to improve the Actor. The Critic is not actually needed during inference for selecting actions, because once the Actor has been trained, it can directly output an action from the current latent state.</p>
+
+        <p>Here is what a single imagined rollout looks like. Dreamer starts from a latent state obtained from real experience. The Actor looks at that state and picks an action. The learned dynamics predict the next latent state. The reward model predicts the reward. That new state becomes the starting point for the next step, and this repeats for the imagination horizon, which is 15 steps for the continuous control experiments.</p>
+
+        <p>Let me make this less abstract with an actual example. Take walker walk, where the agent controls a two-legged body and the whole point is staying upright while moving forward. Say the agent is mid-stride and about to imagine 15 steps ahead. The Actor looks at the current latent state and picks a small adjustment, maybe more torque on the back leg to keep from tipping. The learned dynamics take that action and the current latent state and predict what the next latent state probably looks like, still balanced, slightly further forward. The reward model looks at that predicted state and guesses a reward for it, something like a small positive number for staying upright and moving. That new state becomes the starting point for step two, the Actor picks another action, the dynamics predict again, the reward model guesses again, and this keeps going for the full 15 steps. None of this touched the real environment. The walker never actually took a single one of those steps in the real world, the RSSM predicted what would happen if it did, and it is this imagined sequence of states, actions, and rewards that the Actor and Critic actually learn from.</p>
+
+        <figure class="wide bordered">
+            <img src="utils/images/dreamer/walker_walk.png" alt="Walker walk task from the DeepMind Control Suite showing a two-legged body learning to walk">
+            <figcaption><strong>Figure 3.</strong> The walker walk task from the DeepMind Control Suite. The agent controls a two-legged body and must learn to stay upright while moving forward, receiving only pixel observations.</figcaption>
+        </figure>
+
+        <p>Since the world model is made of differentiable neural networks, the Actor's actions affect the future latent states and predicted rewards through the learned dynamics. This means that gradients can be propagated through the imagined trajectory, allowing the Actor to be updated according to the long-term value of the states its actions lead to.</p>
+
+        <figure class="wide bordered">
+            <img src="utils/images/dreamer/learn_behavior.png" alt="Diagram showing learning behavior in imagination, with states leading to actions, next states, rewards, and values">
+            <figcaption><strong>Figure 4.</strong> Learning behavior in imagination. The Actor and Critic are trained on simulated trajectories without interacting with the real environment.</figcaption>
+        </figure>
+
+        <h3>How the Actor and Critic actually learn</h3>
+
+        <p>The Critic is trained using Bellman-style value updates. A Bellman backup updates the estimated value of a state using the reward associated with that transition together with the estimated value of the next state, usually multiplied by a discount factor $\gamma$. You can think of it as taking information about future rewards and using it to improve the value estimate of an earlier state.</p>
+
+        <p>Dreamer then uses something called a $\lambda$-return instead of relying only on a one-step Bellman target. The idea is to combine different multi-step return estimates, where some estimates look only a short distance into the future and others use more of the imagined trajectory before bootstrapping from the Critic. The parameter $\lambda$ controls how strongly these different multi-step estimates are weighted.</p>
+
+        <p>A value of $\lambda$ closer to zero puts more weight on shorter, more bootstrapped estimates, while a value closer to one gives more weight to longer returns that rely more on the imagined rewards. Dreamer uses $\lambda = 0.95$, while the discount factor is $\gamma = 0.99$, so these two values play different roles.</p>
+
+        <p>What I mean by that is, this is really the bias-variance tradeoff in action. A one-step target depends heavily on the Critic's current estimate, so if the Critic is inaccurate, the target can be biased. Longer multi-step targets use more of the rewards from the imagined trajectory and rely less on the Critic, but they can become more sensitive to errors that appear further along the rollout. The $\lambda$-return provides a middle ground between these extremes by combining different multi-step estimates rather than relying completely on either a one-step target or a full return.</p>
+
+        <p>The Critic gets nudged closer to the $\lambda$-return target using a slowly updated copy of itself, so the target it is chasing does not keep shifting. The Actor gets pushed to make the states its actions lead to score higher on that same $\lambda$-return, with a small entropy bonus added to prevent it from settling into one fixed behaviour too early and losing the ability to explore.</p>
+
+        <h3>Making it all differentiable</h3>
+
+        <p>There is a problem though, because the stochastic latent state has to be sampled during imagination, and ordinary random sampling would interrupt the path needed for gradient-based learning. This is where the reparameterization trick, borrowed from variational autoencoders, becomes useful. Instead of treating the sample as an operation that blocks gradients, the stochastic state can be written using the predicted mean and standard deviation together with an external noise variable.</p>
+
+        <div class="equation-block">
+            $$s_t = \mu_t + \sigma_t \odot \epsilon, \quad \epsilon \sim \mathcal{N}(0, I)$$
+        </div>
+
+        <p>The randomness comes from $\epsilon$, which is external noise that does not depend on any parameters. The mean $\mu_t$ and standard deviation $\sigma_t$ are predicted by the network, so gradients can flow through them. This allows the sampled state to remain part of the differentiable computation.</p>
+
+        <p>So the whole process becomes a differentiable imagined training loop. The Actor chooses actions, the world model predicts the consequences, the Critic estimates the value of the imagined states, the $\lambda$-return provides the value targets, and gradients can flow through the imagined trajectory to improve the Actor. The agent is learning from futures that it never actually experienced, using its learned world model as the environment in which that learning takes place.</p>
+
+        <hr class="section-break">
+
+        <!-- ==================== SECTION 4 ==================== -->
+        <h2 id="sec-4">
+            <span class="section-number">4</span>
+            Just Act
+        </h2>
+
+        <p>Once training is done, inference is where all of it gets put to use. We cut the imagination loop off and the Critic has also fulfilled its duties. All we have now is the Actor and the part of the RSSM that is needed to maintain the current latent state, since there is no reason to keep running the imagination loop when the Actor has already been trained.</p>
+
+        <p>We pass a real observation $o_t$ into the encoder, which turns it into something the RSSM can actually use. That gets combined with the recurrent state $h_t$ to work out the current stochastic state $s_t$, and the two together get passed into the fully optimized Actor network. The Actor then directly outputs the action to take.</p>
+
+        <figure class="wide bordered">
+            <img src="utils/images/dreamer/act_environment.png" alt="Diagram showing acting in the environment using the learned Actor model">
+            <figcaption><strong>Figure 5.</strong> Acting in the environment. At inference time, the agent simply encodes the observation and the Actor selects an action directly.</figcaption>
+        </figure>
+
+        <p>We do not do any online planning or search through possible actions. The Actor has already learned from all those imagined trajectories during training, so when it encounters a state during inference, it can directly choose an action instead of having to search through possible futures again.</p>
+
+        <p>Everything that happened during imagination was essentially preparation for this moment. The expensive part happened during training, where the Actor could repeatedly learn from futures generated by the world model, and now during inference it simply uses what it has learned.</p>
+
+        <p>By the way, all of this was tested on 20 continuous control tasks from the DeepMind Control Suite, learning straight from pixels rather than from low-dimensional state, which is part of why the training time comparison against PlaNet earlier actually means something, since both are solving the harder pixel-based version of these tasks.</p>
+
+        <p>This is Dreamer.</p>
+
+        <hr class="section-break">
+
+        <!-- ==================== SECTION 5 ==================== -->
+        <h2 id="sec-5">
+            <span class="section-number">5</span>
+            Looking Ahead
+        </h2>
+
+        <p>This was a very interesting paper for me, so, so good! Everything I studied from PlaNet has built up to this moment, and I really like the progression because every paper adds something new to what I already understand. PlaNet showed me how a world model could be used to plan by searching through possible futures, while Dreamer takes that same idea and changes how the world model is used, instead of repeatedly searching for the best action at inference time, it uses the world model during training to generate imagined futures and learn a policy from them.</p>
+
+        <p>Dreamer is not perfect though. One thing that becomes more important in Dreamer is the accuracy of the learned world model, because the Actor is actually trained using the futures generated by that model. If the imagined dynamics are inaccurate, those incorrect predictions can become part of the training signal and influence what the Actor learns. This is different from PlaNet, where the agent executes only the first action from its planned sequence and then receives a new real observation before planning again, so the real environment keeps correcting the model's predictions.</p>
+
+        <p>Even with that limitation, I think the idea behind Dreamer is really powerful. The world model is no longer just being used to search for an action, it becomes a place where the agent can generate experience and learn from it without having to physically experience every one of those futures. Seeing this progression from World Models to PlaNet and now Dreamer has made the whole idea of model-based reinforcement learning much clearer to me.</p>
+
+        <p>It is exhilarating to see how much more I understand now compared to when I first started reading these papers, and I am really looking forward to reading DreamerV2 and seeing what changes in the next step of this progression.</p>
+
+        <!-- ==================== REFERENCES ==================== -->
+        <div class="references" id="sec-refs">
+            <h2>References</h2>
+            <ol>
+                <li>Hafner, D., Lillicrap, T., Ba, J. and Norouzi, M. (2020). <a href="https://arxiv.org/abs/1912.01603">Dream to Control: Learning Behaviors by Latent Imagination</a>. International Conference on Learning Representations.</li>
+                <li>Hafner, D., Lillicrap, T., Fischer, I., Villegas, R., Ha, D., Lee, H. and Davidson, J. (2019). <a href="https://arxiv.org/abs/1811.04551">Learning Latent Dynamics for Planning from Pixels</a>. arXiv:1811.04551.</li>
+                <li>Ha, D. and Schmidhuber, J. (2018). <a href="https://arxiv.org/abs/1803.10122">World Models</a>. arXiv:1803.10122.</li>
+                <li>Kingma, D. P. and Welling, M. (2014). <a href="https://arxiv.org/abs/1312.6114">Auto-Encoding Variational Bayes</a>. arXiv:1312.6114.</li>
+            </ol>
+        </div>
+
+    </main>
+
+    <!-- ==================== FOOTER ==================== -->
+    <footer class="article-footer">
+        <div class="footer-line">
+            <a href="https://ojayballer.github.io">Omojire Kuseju</a> · 2026
+        </div>
+    </footer>
+
+</body>
+</html>
