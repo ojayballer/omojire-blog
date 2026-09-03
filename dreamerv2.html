@@ -1,0 +1,653 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>DreamerV2: The Dream That Beat Atari</title>
+    <meta name="description" content="A deep dive into DreamerV2 and how categorical latents helped a world model achieve human-level performance on Atari.">
+    <meta name="author" content="Omojire Kuseju">
+
+    <!-- KaTeX for LaTeX rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+
+    <style>
+        /* ==========================================
+           RESET & BASE
+           ========================================== */
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        html {
+            font-size: 18px;
+            scroll-behavior: smooth;
+            -webkit-font-smoothing: antialiased;
+            -moz-osx-font-smoothing: grayscale;
+            overflow-x: hidden;
+            -webkit-hyphens: none;
+            -moz-hyphens: none;
+            hyphens: none;
+        }
+
+        body {
+            font-family: 'Source Serif 4', 'Georgia', serif;
+            font-weight: 400;
+            line-height: 1.78;
+            color: #1a1a1a;
+            background-color: #fdfdfc;
+            overflow-x: hidden;
+            width: 100%;
+        }
+
+        ::selection {
+            background: rgba(45, 55, 72, 0.15);
+        }
+
+        /* ==========================================
+           LAYOUT
+           ========================================== */
+        .article-header {
+            max-width: 720px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 80px 24px 0;
+        }
+
+        .article-body {
+            max-width: 720px;
+            width: 100%;
+            margin: 0 auto;
+            padding: 0 24px 100px;
+        }
+
+        /* ==========================================
+           HEADER
+           ========================================== */
+        .article-header .overline {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.12em;
+            text-transform: uppercase;
+            color: #6b7280;
+            margin-bottom: 20px;
+        }
+
+        .article-header h1 {
+            font-family: 'Source Serif 4', serif;
+            font-size: 2.6rem;
+            font-weight: 700;
+            line-height: 1.15;
+            color: #111;
+            margin-bottom: 24px;
+            letter-spacing: -0.02em;
+        }
+
+        .article-header .subtitle {
+            font-size: 1.15rem;
+            font-weight: 400;
+            line-height: 1.6;
+            color: #4a5568;
+            margin-bottom: 40px;
+            font-style: italic;
+        }
+
+        .article-meta {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            padding-bottom: 40px;
+            border-bottom: 1px solid #e5e7eb;
+            margin-bottom: 48px;
+        }
+
+        .article-meta .author-name {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.83rem;
+            font-weight: 600;
+            color: #1a1a1a;
+        }
+
+        .article-meta .meta-detail {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.78rem;
+            color: #6b7280;
+        }
+
+        .article-meta .meta-detail a {
+            color: #4a5568;
+            text-decoration: none;
+            border-bottom: 1px solid #d1d5db;
+            transition: border-color 0.2s;
+        }
+
+        .article-meta .meta-detail a:hover {
+            border-color: #1a1a1a;
+        }
+
+        .meta-separator {
+            width: 3px;
+            height: 3px;
+            border-radius: 50%;
+            background: #9ca3af;
+        }
+
+        /* ==========================================
+           TABLE OF CONTENTS
+           ========================================== */
+        .toc {
+            background: #f8f9fa;
+            border: 1px solid #e9ecef;
+            border-radius: 6px;
+            padding: 28px 32px;
+            margin-bottom: 56px;
+        }
+
+        .toc-title {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.72rem;
+            font-weight: 600;
+            letter-spacing: 0.1em;
+            text-transform: uppercase;
+            color: #6b7280;
+            margin-bottom: 16px;
+        }
+
+        .toc ol {
+            list-style: none;
+            counter-reset: toc-counter;
+        }
+
+        .toc ol li {
+            counter-increment: toc-counter;
+            margin-bottom: 6px;
+        }
+
+        .toc ol li a {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.83rem;
+            color: #374151;
+            text-decoration: none;
+            transition: color 0.2s;
+            display: flex;
+            align-items: baseline;
+            gap: 10px;
+        }
+
+        .toc ol li a::before {
+            content: counter(toc-counter);
+            font-size: 0.72rem;
+            font-weight: 600;
+            color: #9ca3af;
+            min-width: 16px;
+        }
+
+        .toc ol li a:hover {
+            color: #111;
+        }
+
+        /* ==========================================
+           TYPOGRAPHY
+           ========================================== */
+        .article-body p {
+            margin-bottom: 1.4em;
+            font-size: 1rem;
+            color: #2d3748;
+        }
+
+        .article-body h2 {
+            font-family: 'Source Serif 4', serif;
+            font-size: 1.7rem;
+            font-weight: 600;
+            color: #111;
+            margin-top: 64px;
+            margin-bottom: 24px;
+            line-height: 1.25;
+            letter-spacing: -0.01em;
+        }
+
+        .article-body h2 .section-number {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.83rem;
+            font-weight: 600;
+            color: #9ca3af;
+            display: block;
+            margin-bottom: 6px;
+        }
+
+        .article-body h3 {
+            font-family: 'Source Serif 4', serif;
+            font-size: 1.25rem;
+            font-weight: 600;
+            color: #1a1a1a;
+            margin-top: 40px;
+            margin-bottom: 16px;
+            line-height: 1.35;
+        }
+
+        /* ==========================================
+           LINKS
+           ========================================== */
+        .article-body a {
+            color: #1a1a1a;
+            text-decoration: none;
+            border-bottom: 1.5px solid #cbd5e0;
+            transition: border-color 0.2s ease;
+        }
+
+        .article-body a:hover {
+            border-color: #1a1a1a;
+        }
+
+        /* ==========================================
+           FIGURES
+           ========================================== */
+        figure {
+            margin: 48px 0;
+            text-align: center;
+        }
+
+        figure.wide {
+            margin-left: -80px;
+            margin-right: -80px;
+        }
+
+        figure img {
+            max-width: 100% !important;
+            height: auto;
+            border-radius: 4px;
+        }
+
+        figure.bordered img {
+            border: 1px solid #e5e7eb;
+        }
+
+        figcaption {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.78rem;
+            color: #6b7280;
+            margin-top: 14px;
+            line-height: 1.55;
+            max-width: 560px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+
+        figcaption strong {
+            color: #374151;
+            font-weight: 600;
+        }
+
+        /* ==========================================
+           EQUATIONS
+           ========================================== */
+        .equation-block {
+            background: #f8f9fa;
+            border-left: 3px solid #d1d5db;
+            padding: 20px 28px;
+            margin: 32px 0;
+            border-radius: 0 4px 4px 0;
+            overflow-x: auto;
+        }
+
+        .equation-block .katex-display {
+            margin: 0;
+        }
+
+        /* ==========================================
+           ASIDE / CALLOUT
+           ========================================== */
+        .aside {
+            background: #f0f4f8;
+            border-left: 3px solid #4a5568;
+            padding: 20px 24px;
+            margin: 36px 0;
+            border-radius: 0 4px 4px 0;
+            font-size: 0.92rem;
+            color: #2d3748;
+            line-height: 1.65;
+        }
+
+        .aside p:last-child {
+            margin-bottom: 0;
+        }
+
+        /* ==========================================
+           HORIZONTAL RULE
+           ========================================== */
+        .section-break {
+            border: none;
+            height: 1px;
+            background: #e5e7eb;
+            margin: 64px 0;
+        }
+
+        /* ==========================================
+           REFERENCES
+           ========================================== */
+        .references {
+            margin-top: 64px;
+            padding-top: 40px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .references h2 {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.83rem;
+            font-weight: 600;
+            letter-spacing: 0.08em;
+            text-transform: uppercase;
+            color: #6b7280;
+            margin-top: 0;
+            margin-bottom: 24px;
+        }
+
+        .references ol {
+            list-style: none;
+            counter-reset: ref-counter;
+            padding: 0;
+        }
+
+        .references ol li {
+            counter-increment: ref-counter;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.83rem;
+            color: #4a5568;
+            margin-bottom: 12px;
+            padding-left: 28px;
+            position: relative;
+            line-height: 1.55;
+            overflow-wrap: break-word;
+            word-break: break-word;
+            -webkit-hyphens: none;
+            -moz-hyphens: none;
+            hyphens: none;
+        }
+
+        .references ol li::before {
+            content: counter(ref-counter) ".";
+            position: absolute;
+            left: 0;
+            font-weight: 600;
+            color: #9ca3af;
+        }
+
+        .references ol li a {
+            color: #4a5568;
+            border-bottom: 1px solid #d1d5db;
+            text-decoration: none;
+            transition: border-color 0.2s;
+        }
+
+        .references ol li a:hover {
+            border-color: #4a5568;
+        }
+
+        /* ==========================================
+           FOOTER
+           ========================================== */
+        .article-footer {
+            max-width: 720px;
+            margin: 0 auto;
+            padding: 0 24px 80px;
+        }
+
+        .footer-line {
+            font-family: 'Inter', sans-serif;
+            font-size: 0.78rem;
+            color: #9ca3af;
+            text-align: center;
+            padding-top: 40px;
+            border-top: 1px solid #e5e7eb;
+        }
+
+        .footer-line a {
+            color: #6b7280;
+            text-decoration: none;
+            border-bottom: 1px solid transparent;
+            transition: border-color 0.2s;
+        }
+
+        .footer-line a:hover {
+            border-color: #6b7280;
+        }
+
+        /* ==========================================
+           RESPONSIVE
+           ========================================== */
+        @media (max-width: 840px) {
+            figure.wide {
+                margin-left: 0;
+                margin-right: 0;
+            }
+        }
+
+        @media (max-width: 640px) {
+            html {
+                font-size: 16px;
+            }
+
+            .article-header {
+                padding: 48px 20px 0;
+            }
+
+            .article-header h1 {
+                font-size: 2rem;
+            }
+
+            .article-body {
+                padding: 0 20px 80px;
+            }
+
+            .toc {
+                padding: 20px 24px;
+            }
+
+            .equation-block {
+                padding: 16px 20px;
+            }
+
+            .article-footer {
+                padding: 0 20px 60px;
+            }
+        }
+
+        /* ==========================================
+           KATEX OVERRIDES
+           ========================================== */
+        .katex-display {
+            margin: 1em 0;
+            overflow-x: auto;
+            overflow-y: hidden;
+        }
+
+        .katex {
+            font-size: 1.05em;
+        }
+    </style>
+</head>
+<body>
+
+    <!-- ==================== HEADER ==================== -->
+    <header class="article-header">
+        <div class="overline">Research Notes</div>
+        <h1>DreamerV2: The Dream That Beat Atari</h1>
+        <p class="subtitle">How categorical latents helped a world model achieve human-level performance on Atari.</p>
+        <div class="article-meta">
+            <span class="author-name">Omojire Kuseju</span>
+            <span class="meta-separator"></span>
+            <span class="meta-detail">September 2026</span>
+            <span class="meta-separator"></span>
+            <span class="meta-detail"><a href="https://x.com/ojbaby_11">&#x1D54F;</a></span>
+        </div>
+    </header>
+
+    <!-- ==================== BODY ==================== -->
+    <main class="article-body">
+
+        <!-- TABLE OF CONTENTS -->
+        <nav class="toc" id="toc">
+            <div class="toc-title">Contents</div>
+            <ol>
+                <li><a href="#sec-1">Imagination Wasn't Enough</a></li>
+                <li><a href="#sec-2">The Latent State Goes Discrete</a></li>
+                <li><a href="#sec-3">Letting the Prior Catch Up</a></li>
+                <li><a href="#sec-4">Why Categories Won</a></li>
+                <li><a href="#sec-5">The Dreamer Plays Atari</a></li>
+                <li><a href="#sec-refs">References</a></li>
+            </ol>
+        </nav>
+
+        <!-- ==================== SECTION 1 ==================== -->
+        <h2 id="sec-1">
+            <span class="section-number">1</span>
+            Imagination Wasn't Enough
+        </h2>
+
+        <p>My last blog post covered <a href="/dreamer">DreamerV1</a> and how it uses a learned world model to imagine future trajectories and train an Actor and Critic from those imagined experiences. DreamerV1 showed that an agent could use its own imagined world to solve long horizon tasks, while also improving sample efficiency and reducing the amount of computation needed compared to previous model based approaches.</p>
+
+        <p>That was already pretty impressive, but there was a problem.</p>
+
+        <p>DreamerV1 had been demonstrated mainly on continuous control environments. Atari was a completely different beast. Model free methods had already shown that they could perform extremely well on Atari, while model based methods were still struggling to learn world models that were good enough for these more complicated environments.</p>
+
+        <p>There had been some big successes with model based methods, most notably <a href="https://arxiv.org/abs/1911.08265" target="_blank" rel="noopener noreferrer">MuZero</a>, which showed just how powerful a learned model could be. But DreamerV2 wanted to push the Dreamer idea further and see if it could actually compete on Atari.</p>
+
+        <p>DreamerV2 keeps the basic idea from V1. The agent still learns a world model, still imagines future trajectories inside that model, and still uses those imagined trajectories to train its Actor and Critic. But some important changes were made to the way the world model represents its latent states and how the Actor is trained, and those changes turned out to matter a lot. DreamerV2 achieved results that surpassed <a href="https://arxiv.org/abs/1710.02298" target="_blank" rel="noopener noreferrer">Rainbow</a> and <a href="https://arxiv.org/abs/1806.06923" target="_blank" rel="noopener noreferrer">IQN</a>, two of the strongest model free agents at the time, and became the first world model agent to reach human level performance on Atari, all on a single GPU.</p>
+
+        <p>This blog is going to be relatively short compared to the others because everything has been building on each other. If you haven't read my posts on <a href="/world-models">World Models</a>, <a href="/planet">PlaNet</a> and <a href="/dreamer">DreamerV1</a>, I would strongly recommend going through them first. A lot of the notation and ideas in this post come directly from those papers.</p>
+
+        <p>Alright, let me get into it.</p>
+
+        <figure class="wide bordered">
+            <img src="utils/images/dreamerv2/dreamerv2_performance.png" alt="Gamer normalized median score on Atari, DreamerV2 outperforming Rainbow and IQN">
+            <figcaption><strong>Figure 1.</strong> Gamer normalized median score on the Atari benchmark of 55 games at 200M steps. DreamerV2 is the first agent that learns purely within a world model to achieve human-level Atari performance.</figcaption>
+        </figure>
+
+        <hr class="section-break">
+
+        <!-- ==================== SECTION 2 ==================== -->
+        <h2 id="sec-2">
+            <span class="section-number">2</span>
+            The Latent State Goes Discrete
+        </h2>
+
+        <p>DreamerV1 used a continuous stochastic state $z_t$, where the model represented it with a Gaussian distribution defined by a mean and variance. During training, it sampled $z_t$ from this distribution and used the reparameterization trick so that gradients could still flow through the sampling process.</p>
+
+        <p>DreamerV2 changes this. Instead of using one continuous stochastic vector, the stochastic state $z_t$ is now made up of 32 categorical variables, with each variable having 32 possible classes, so each variable can choose one category out of 32, giving the model a $32 \times 32$ one hot representation of $z_t$.</p>
+
+        <p>The idea is to give the model a much richer discrete representation of the latent state, one that can capture features of the environment dynamics that might not come through as effectively in the continuous representation DreamerV1 used. The paper investigates why this works better through ablation experiments, and I will get into those later.</p>
+
+        <p>But changing $z_t$ from a continuous distribution to discrete categorical variables creates a new problem. DreamerV1 could use the reparameterization trick because its stochastic state was continuous, but with DreamerV2 the model has to sample discrete categories, and discrete sampling is not directly differentiable, so we cannot simply backpropagate through the sampled $z_t$ the same way anymore.</p>
+
+        <p>This is where the straight through estimator comes in. DreamerV2 uses straight through gradients to train the categorical latent variables, using the actual discrete sample during the forward pass while using a differentiable approximation during the backward pass, so gradients can still flow through the discrete representation. It is not a completely new concept, it is an established technique that DreamerV2 applies to its discrete world model.</p>
+
+        <figure class="wide bordered">
+            <img src="utils/images/dreamerv2/dreamerv2_world_model.png" alt="World Model Learning with categorical states">
+            <figcaption><strong>Figure 2.</strong> World Model Learning. Unlike in PlaNet and DreamerV1, the stochastic state of DreamerV2 is a vector of multiple categorical variables instead of continuous Gaussians.</figcaption>
+        </figure>
+
+        <hr class="section-break">
+
+        <!-- ==================== SECTION 3 ==================== -->
+        <h2 id="sec-3">
+            <span class="section-number">3</span>
+            Letting the Prior Catch Up
+        </h2>
+
+        <p>Some changes were also made to the KL divergence loss. In the standard KL objective, the KL term both trains the prior toward the posterior and regularizes the posterior toward the prior. But early in training the prior can be poorly learned, so forcing the posterior toward a bad prior can actually hurt the representation.</p>
+
+        <p>DreamerV2 addresses this with something called KL balancing, which makes the KL loss update the prior more strongly than the posterior, using a weighting of 0.8 for the prior and 0.2 for the posterior. What this does is let the prior move toward the posterior faster, and this matters because the prior is what the agent later uses to imagine future states. If the prior is bad, everything the agent imagines during latent imagination is going to be bad too.</p>
+
+        <p>I won't be covering the exact details of how the Actor and Critic are trained or how latent imagination works here, since I already broke those down in the <a href="/dreamer">DreamerV1 post</a>, which is a great place to start if you want a recap. What is actually new in DreamerV2 is a handful of training adjustments on top of that same setup.</p>
+
+        <p>The Actor's gradient estimator changes. DreamerV2 considers two options, straight through gradients and REINFORCE gradients, where straight through is biased but lower variance and REINFORCE is unbiased but higher variance. The paper lets the two be combined with a weighting parameter, and for Atari REINFORCE gives better results, so the final configuration puts all the weight on REINFORCE. An entropy term is also added to the Actor's objective to encourage exploration while still letting the policy get precise when it needs to.</p>
+
+        <p>The core idea underneath all of it stays the same though. DreamerV2 is still built around the same basic Dreamer framework, it learns a world model and learns an Actor and Critic from imagined trajectories instead of the real environment. It is essentially an evolution of DreamerV1 rather than a completely different algorithm.</p>
+
+        <hr class="section-break">
+
+        <!-- ==================== SECTION 4 ==================== -->
+        <h2 id="sec-4">
+            <span class="section-number">4</span>
+            Why Categories Won
+        </h2>
+
+        <p>Now let me talk about the ablations, because this is where it gets interesting. After noticing that categorical latents were performing better than continuous ones, the obvious question was, why? What exactly about the categorical representation is giving us this improvement?</p>
+
+        <p>Four hypotheses were put forward.</p>
+
+        <p>The first has to do with how well the prior can fit the aggregate posterior. The posterior produces a distribution for each observation, and when we consider all of those posterior distributions together, we get what is called the aggregate posterior. This distribution can contain multiple modes, meaning there can be several different likely outcomes, and a single Gaussian is not very good at representing that kind of multi-modal distribution. A categorical distribution can represent these different possibilities much more naturally. This one makes intuitive sense to me, because if the aggregate posterior is multi-modal and you are trying to fit it with a single Gaussian, you are essentially forcing a bell curve onto something that has multiple peaks.</p>
+
+        <p>The second has to do with sparsity. Remember that DreamerV2 represents $z_t$ using 32 categorical variables with 32 classes each. Its $32 \times 32$ one hot representation contains 1024 values, but only 32 of them are active because each categorical variable selects one class. That is strong sparsity compared to a continuous vector where every element is always active, and the hypothesis is that this could help the model learn better representations.</p>
+
+        <p>The third has to do with optimization. Since DreamerV2 uses a straight through gradient estimator for the categorical variables, the estimator ignores a term that would normally scale the gradient. The hypothesis is that this could make the optimization landscape smoother and reduce problems such as vanishing and exploding gradients.</p>
+
+        <p>The final hypothesis is about inductive bias. For anyone who does not know, an inductive bias is basically the assumptions a model makes about the structure of a problem before seeing any data. CNNs, for example, have an inductive bias that nearby pixels are related and that local patterns are useful. The hypothesis here is that categorical variables have a better inductive bias for modelling the non smooth parts of Atari environments. Atari has a lot of situations where the environment can change abruptly, something can appear or disappear, an object can change state, or the agent can suddenly enter a different part of the environment. A discrete representation may be better suited to modelling these kinds of abrupt changes than a smooth continuous one. Personally, I think this one and the first hypothesis together probably explain most of the improvement, because Atari environments have both multi-modal dynamics and sudden discrete transitions, and those are exactly the things that continuous Gaussians struggle with.</p>
+
+        <p>These are just hypotheses though. Some other interesting results from the ablations are worth mentioning.</p>
+
+        <p>KL balancing performed better than the standard KL objective on most of the Atari games that were tested, which supports the idea that giving the prior a stronger learning signal actually matters.</p>
+
+        <p>Another experiment involved stopping reward gradients from flowing into the world model. Interestingly, this actually improved performance on some games. Without the reward gradients shaping the representation around rewards the model has already seen, the learned representation may generalize better to situations that were not encountered during training. It was not universally better though, it helped on some games, hurt on others, and made little difference on the rest.</p>
+
+        <p>Finally, straight through gradients alone performed poorly for policy optimization on most Atari games, which is what led to the final Atari configuration putting the weight on REINFORCE instead.</p>
+
+        <figure class="wide bordered">
+            <img src="utils/images/dreamerv2/dreamerv2_ablations.png" alt="Clipped record normalized scores of various ablations">
+            <figcaption><strong>Figure 3.</strong> Ablation studies of the DreamerV2 agent. Categorical representations provide a significant advantage over Gaussian representations, and KL balancing is crucial for high performance.</figcaption>
+        </figure>
+
+        <hr class="section-break">
+
+        <!-- ==================== SECTION 5 ==================== -->
+        <h2 id="sec-5">
+            <span class="section-number">5</span>
+            The Dreamer Plays Atari
+        </h2>
+
+        <p>DreamerV2 outperformed strong model free algorithms like <a href="https://arxiv.org/abs/1710.02298" target="_blank" rel="noopener noreferrer">Rainbow</a> and <a href="https://arxiv.org/abs/1806.06923" target="_blank" rel="noopener noreferrer">IQN</a> on Atari using a single GPU and the same computational budget and training time. It also reached human level performance on the Atari 200M benchmark.</p>
+
+        <p>MuZero achieved stronger performance, but required a much larger computational budget. Training an Atari agent with MuZero on one GPU would take over two months, while DreamerV2 took about 10 days.</p>
+
+        <p>What DreamerV2 really showed is that model based reinforcement learning can outperform strong model free methods on a competitive benchmark like Atari, using a relatively simple world model approach. DreamerV1 showed that an agent could learn from imagined futures. DreamerV2 showed that the same idea could work at the scale of Atari.</p>
+
+        <p>I hope this was worth a read. If you spot something wrong, please reach out to me on X.</p>
+
+        <!-- ==================== REFERENCES ==================== -->
+        <div class="references" id="sec-refs">
+            <h2>References</h2>
+            <ol>
+                <li>Hafner, D., Lillicrap, T., Norouzi, M., and Ba, J. (2020). <a href="https://arxiv.org/abs/2010.02193">Mastering Atari with Discrete World Models</a>. arXiv:2010.02193.</li>
+                <li>Hafner, D., Lillicrap, T., Ba, J. and Norouzi, M. (2019). <a href="https://arxiv.org/abs/1912.01603">Dream to Control: Learning Behaviors by Latent Imagination</a>. International Conference on Learning Representations.</li>
+                <li>Hafner, D., Lillicrap, T., Fischer, I., Villegas, R., Ha, D., Lee, H. and Davidson, J. (2018). <a href="https://arxiv.org/abs/1811.04551">Learning Latent Dynamics for Planning from Pixels</a>. arXiv:1811.04551.</li>
+                <li>Ha, D. and Schmidhuber, J. (2018). <a href="https://arxiv.org/abs/1803.10122">World Models</a>. arXiv:1803.10122.</li>
+            </ol>
+        </div>
+
+    </main>
+
+    <!-- ==================== FOOTER ==================== -->
+    <footer class="article-footer">
+        <div class="footer-line">
+            <a href="https://ojayballer.github.io">Omojire Kuseju</a> · 2026
+        </div>
+    </footer>
+
+</body>
+</html>
