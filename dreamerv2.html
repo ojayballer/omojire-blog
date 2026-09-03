@@ -520,7 +520,7 @@
             Imagination Wasn't Enough
         </h2>
 
-        <p>My last blog post covered <a href="/dreamer">DreamerV1</a> and how it uses a learned world model to imagine future trajectories and train an Actor and Critic from those imagined experiences. DreamerV1 showed that an agent could use its own imagined world to solve long horizon tasks, while also improving sample efficiency and reducing the amount of computation needed compared to previous model based approaches.</p>
+        <p>My last blog post covered <a href="https://ojayballer.github.io/omojire-blog/dreamer.html">DreamerV1</a> and how it uses a learned world model to imagine future trajectories and train an Actor and Critic from those imagined experiences. DreamerV1 showed that an agent could use its own imagined world to solve long horizon tasks, while also improving sample efficiency and reducing the amount of computation needed compared to previous model based approaches.</p>
 
         <p>That was already pretty impressive, but there was a problem.</p>
 
@@ -530,7 +530,7 @@
 
         <p>DreamerV2 keeps the basic idea from V1. The agent still learns a world model, still imagines future trajectories inside that model, and still uses those imagined trajectories to train its Actor and Critic. But some important changes were made to the way the world model represents its latent states and how the Actor is trained, and those changes turned out to matter a lot. DreamerV2 achieved results that surpassed <a href="https://arxiv.org/abs/1710.02298" target="_blank" rel="noopener noreferrer">Rainbow</a> and <a href="https://arxiv.org/abs/1806.06923" target="_blank" rel="noopener noreferrer">IQN</a>, two of the strongest model free agents at the time, and became the first world model agent to reach human level performance on Atari, all on a single GPU.</p>
 
-        <p>This blog is going to be relatively short compared to the others because everything has been building on each other. If you haven't read my posts on <a href="/world-models">World Models</a>, <a href="/planet">PlaNet</a> and <a href="/dreamer">DreamerV1</a>, I would strongly recommend going through them first. A lot of the notation and ideas in this post come directly from those papers.</p>
+        <p>This blog is going to be relatively short compared to the others because everything has been building on each other. If you haven't read my posts on <a href="https://ojayballer.github.io/omojire-blog/world-models.html">World Models</a>, <a href="https://ojayballer.github.io/omojire-blog/planet.html">PlaNet</a> and <a href="https://ojayballer.github.io/omojire-blog/dreamer.html">DreamerV1</a>, I would strongly recommend going through them first. A lot of the notation and ideas in this post come directly from those papers.</p>
 
         <p>Alright, let me get into it.</p>
 
@@ -574,7 +574,7 @@
 
         <p>DreamerV2 addresses this with something called KL balancing, which makes the KL loss update the prior more strongly than the posterior, using a weighting of 0.8 for the prior and 0.2 for the posterior. What this does is let the prior move toward the posterior faster, and this matters because the prior is what the agent later uses to imagine future states. If the prior is bad, everything the agent imagines during latent imagination is going to be bad too.</p>
 
-        <p>I won't be covering the exact details of how the Actor and Critic are trained or how latent imagination works here, since I already broke those down in the <a href="/dreamer">DreamerV1 post</a>, which is a great place to start if you want a recap. What is actually new in DreamerV2 is a handful of training adjustments on top of that same setup.</p>
+        <p>I won't be covering the exact details of how the Actor and Critic are trained or how latent imagination works here, since I already broke those down in the <a href="https://ojayballer.github.io/omojire-blog/dreamer.html">DreamerV1 post</a>, which is a great place to start if you want a recap. What is actually new in DreamerV2 is a handful of training adjustments on top of that same setup.</p>
 
         <p>The Actor's gradient estimator changes. DreamerV2 considers two options, straight through gradients and REINFORCE gradients, where straight through is biased but lower variance and REINFORCE is unbiased but higher variance. The paper lets the two be combined with a weighting parameter, and for Atari REINFORCE gives better results, so the final configuration puts all the weight on REINFORCE. An entropy term is also added to the Actor's objective to encourage exploration while still letting the policy get precise when it needs to.</p>
 
