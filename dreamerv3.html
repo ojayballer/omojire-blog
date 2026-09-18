@@ -1,1 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Beyond Imagination: 15 Steps Ahead of Reality</title>
+    <meta name="description" content="Building a state of the art world model from scratch.">
+    <meta name="author" content="Omojire Kuseju">
+    <!-- KaTeX for LaTeX rendering -->
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"
+        onload="renderMathInElement(document.body, {
+            delimiters: [
+                {left: '$$', right: '$$', display: true},
+                {left: '$', right: '$', display: false}
+            ],
+            throwOnError: false
+        });"></script>
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Source+Serif+4:ital,opsz,wght@0,8..60,300;0,8..60,400;0,8..60,500;0,8..60,600;0,8..60,700;1,8..60,400;1,8..60,500&family=JetBrains+Mono:wght@400;500&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+    
+    <style>
+        *, *::before, *::after { margin: 0; padding: 0; box-sizing: border-box; }
+        html { font-size: 18px; scroll-behavior: smooth; -webkit-font-smoothing: antialiased; }
+        body { font-family: 'Source Serif 4', 'Georgia', serif; font-weight: 400; color: #1a1a1a; line-height: 1.6; background-color: #fcfcfc; padding: 0 24px; }
+        .article-header { max-width: 720px; margin: 96px auto 64px; text-align: center; }
+        .overline { font-family: 'Inter', sans-serif; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #4a5568; margin-bottom: 24px; }
+        .title { font-size: 2.8rem; font-weight: 700; line-height: 1.1; margin-bottom: 20px; color: #111; letter-spacing: -0.02em; }
+        .subtitle { font-size: 1.3rem; font-style: italic; color: #4a5568; margin-bottom: 40px; }
+        .article-meta { display: flex; align-items: center; justify-content: center; gap: 16px; margin-top: 32px; }
+        .article-meta .author-name { font-family: 'Inter', sans-serif; font-size: 0.83rem; font-weight: 600; color: #1a1a1a; }
+        .article-meta .meta-detail { font-family: 'Inter', sans-serif; font-size: 0.78rem; color: #6b7280; }
+        .article-meta .meta-detail a { color: #4a5568; text-decoration: none; border-bottom: 1px solid #d1d5db; transition: border-color 0.2s; }
+        .article-meta .meta-detail a:hover { border-color: #1a1a1a; }
+        .meta-separator { width: 3px; height: 3px; border-radius: 50%; background: #9ca3af; }
+        
+        .article-body { max-width: 720px; margin: 0 auto 120px; }
+        .toc { background: #f8f9fa; border: 1px solid #e9ecef; border-radius: 6px; padding: 28px 32px; margin-bottom: 56px; }
+        .toc-title { font-family: 'Inter', sans-serif; font-size: 0.72rem; font-weight: 600; letter-spacing: 0.1em; text-transform: uppercase; color: #6b7280; margin-bottom: 16px; }
+        .toc ol { list-style: none; counter-reset: toc-counter; }
+        .toc ol li { counter-increment: toc-counter; margin-bottom: 6px; }
+        .toc ol li a { font-family: 'Inter', sans-serif; font-size: 0.83rem; color: #374151; text-decoration: none; display: flex; align-items: baseline; gap: 10px; }
+        .toc ol li a::before { content: counter(toc-counter); font-size: 0.72rem; font-weight: 600; color: #9ca3af; min-width: 16px; }
+        
+        .article-body p { margin-bottom: 1.4em; font-size: 1rem; color: #2d3748; }
+        .article-body h2 { font-family: 'Source Serif 4', serif; font-size: 1.7rem; font-weight: 600; color: #111; margin-top: 64px; margin-bottom: 24px; }
+        .article-body h3 { font-family: 'Source Serif 4', serif; font-size: 1.3rem; font-weight: 600; color: #2d3748; margin-top: 48px; margin-bottom: 16px; }
+        .section-number { color: #9ca3af; margin-right: 12px; font-weight: 400; }
+        
+        pre { background-color: #1e1e1e; color: #d4d4d4; padding: 20px; border-radius: 8px; overflow-x: auto; font-family: 'JetBrains Mono', monospace; font-size: 0.83rem; line-height: 1.5; margin-bottom: 28px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05); }
+        code { font-family: 'JetBrains Mono', monospace; font-size: 0.85em; background: #f1f5f9; padding: 2px 6px; border-radius: 4px; color: #0f172a; }
+        pre code { background: none; padding: 0; color: inherit; }
+        
+        figure { margin: 48px 0; }
+        figure.wide { margin-left: calc(50% - 400px); width: 800px; max-width: 100vw; text-align: center; }
+        figure.bordered img { border: 1px solid #e2e8f0; border-radius: 8px; }
+        figure img { max-width: 100%; width: auto; height: auto; display: block; margin: 0 auto; border-radius: 6px; }
+        figcaption { font-family: 'Inter', sans-serif; font-size: 0.83rem; color: #6b7280; text-align: center; margin-top: 16px; line-height: 1.5; }
+        figcaption strong { color: #374151; font-weight: 600; }
+        
+        .section-break { border: 0; height: 1px; background: #e5e7eb; margin: 64px auto; width: 60px; }
+        .references { margin-top: 80px; padding-top: 40px; border-top: 1px solid #e5e7eb; }
+        .references h2 { font-size: 1.2rem; margin-top: 0; }
+        .references ol { padding-left: 20px; }
+        .references li { font-size: 0.85rem; color: #6b7280; margin-bottom: 12px; }
+        .references a { color: #3b82f6; text-decoration: none; }
+        .references a:hover { text-decoration: underline; }
+        
+        .article-footer { border-top: 1px solid #e5e7eb; padding: 40px 0 80px; text-align: center; font-family: 'Inter', sans-serif; font-size: 0.83rem; color: #9ca3af; }
+        .article-footer a { color: #9ca3af; text-decoration: none; }
+        .article-footer a:hover { color: #111; }
+        
+        @media (max-width: 840px) { figure.wide { margin-left: 0; width: 100%; } }
+    </style>
+</head>
+<body>
+    <header class="article-header">
+        <div class="overline">Research Notes</div>
+        <h1 class="title">Beyond Imagination: 15 Steps Ahead of Reality</h1>
+        <p class="subtitle">Building a state of the art world model from scratch 🚀 DreamerV3</p>
+        <div class="article-meta">
+            <div class="author-name">Omojire Kuseju</div>
+            <div class="meta-separator"></div>
+            <div class="meta-detail">September 18, 2026</div>
+            <div class="meta-separator"></div>
+            <div class="meta-detail"><a href="https://x.com/ojbaby_11" target="_blank" style="display: inline-flex; align-items: center; text-decoration: none; color: inherit;"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="vertical-align: middle; margin-right: 4px; position: relative; top: -1px;"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 24.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>@ojbaby_11</a></div>
+        </div>
+    </header>
 
+    <main class="article-body">
+
+        <!-- ==================== TOP HOOK ==================== -->
+        <figure class="wide bordered">
+            <img src="dreamerv3blog/breakout_dreaming.gif" alt="A complete hallucination in Breakout">
+            <figcaption><strong>Figure 1.</strong> A glimpse of the final result: the agent predicting the future entirely inside its own neural network. The left side is reality, the right side is the model's imagination.</figcaption>
+        </figure>
+        
+        <p>I have spent the last few weeks trying to build a world model, specifically DreamerV3, purely in JAX. I had no solid reason, I just wanted to do it. It wasn't simple at all. In fact it was brutally difficult. Training an RL agent that actually learns a world model involves massive computational constraints, memory bottlenecks, and tracking down bugs that don't even crash your code—they just silently destroy the agent's intelligence. I am writing this to document what changed from the last version, what broke, and what finally worked.</p>
+
+        <!-- ==================== TOC ==================== -->
+        <nav class="toc">
+            <div class="toc-title">Contents</div>
+            <ol>
+                <li><a href="#sec-1">Why I Built This</a></li>
+                <li><a href="#sec-2">What Changed</a></li>
+                <li><a href="#sec-3">The Bugs That Don't Crash</a></li>
+                <li><a href="#sec-4">The Results</a></li>
+                <li><a href="#sec-5">Conclusion</a></li>
+                <li><a href="#sec-refs">References</a></li>
+            </ol>
+        </nav>
+
+        <h2 id="sec-1"><span class="section-number">1</span> Why I Built This</h2>
+        <p>In the <a href="dreamerv2.html">last blog</a> I talked about DreamerV2 and how it was the first world model agent to achieve human level performance on Atari. But the problem was that DreamerV2 was still heavily configured around Atari. If you moved an agent tuned for Atari to environments with completely different dynamics or reward scales, it would likely struggle unless you adjusted the hyperparameters all over again.</p>
+
+        <p>This is what DreamerV3 was trying to solve. The goal was to build a general algorithm that could work across different environments with one stable configuration, without excessive hyperparameter tuning or changing network layers. DreamerV3 was able to learn across more than 150 different tasks with that single fixed setup, while also outperforming specialized methods across a wide range of benchmarks. One of the most interesting results was Minecraft, where it was able to collect diamonds from scratch without human gameplay data or extra help for the task.</p>
+
+        <p>So, the challenge was set. I decided to rewrite Dreamer from scratch using JAX. JAX is incredibly fast but also unforgiving if you mess up the tensor shapes or vmap dimensions. If you are training a world model, doing it purely in JAX forces you to understand every single matrix multiplication happening under the hood.</p>
+
+        <hr class="section-break">
+
+        <h2 id="sec-2"><span class="section-number">2</span> What Changed</h2>
+        
+        <figure class="wide bordered">
+            <img src="dreamerv3blog/dreamerv3_arch.png" alt="DreamerV3 Architecture">
+            <figcaption><strong>Figure 2.</strong> The DreamerV3 architecture. (a) shows the world model learning loop where the encoder, RSSM, and decoder are trained on real experience. (b) shows the actor critic learning loop where behaviour is trained entirely inside imagined rollouts.</figcaption>
+        </figure>
+
+        <p>The core RSSM equations are the same as V2, so I will not re-derive them. Here they are for reference:</p>
+
+        <p>Sequence Model: $h_t = f_\phi(h_{t-1}, z_{t-1}, a_{t-1})$</p>
+        <p>Encoder: $e_t = \text{enc}_\theta(x_t)$</p>
+        <p>Dynamics Predictor: $\hat{z}_t \sim p_\phi(\hat{z}_t | h_t)$</p>
+        <p>Representation Model: $z_t \sim q_\phi(z_t | h_t, e_t)$</p>
+        <p>Reward Predictor: $\hat{r}_t \sim p_\phi(\hat{r}_t | h_t, z_t)$</p>
+        <p>Continue Predictor: $\hat{c}_t \sim p_\phi(\hat{c}_t | h_t, z_t)$</p>
+        <p>Decoder: $\hat{x}_t \sim p_\phi(\hat{x}_t | h_t, z_t)$</p>
+
+        <p>What makes DreamerV3 so general across domains isn't a new mathematical foundation for the RSSM, but rather a series of aggressive normalization techniques and a new transformation for scaling. The most important changes from V2 are Symlog, Unimix, and scaling down the Representation KL.</p>
+
+        <h3>Symlog</h3>
+        <p>Symlog (symmetric logarithm) is the backbone of V3's robustness. Imagine two games: one gives you $+1$ reward for winning, the other gives you $+1000$. A standard neural network will get completely unstable trying to predict the 1000 scale without tuning the learning rates. Symlog compresses everything—observations, rewards, and predictions—into a manageable range without destroying the sign. It is defined as:</p>
+
+        <p>$$\text{symlog}(x) = \text{sgn}(x) \ln(|x| + 1)$$</p>
+
+        <p>It behaves like the identity function near zero (so small details are preserved) and like a log function for large values. This single transformation is what allowed the V3 authors to freeze their hyperparameters across 150 tasks.</p>
+
+        <figure class="wide bordered">
+            <img src="dreamerv3blog/symlog_curve.png" alt="Symlog Curve">
+            <figcaption><strong>Figure 3.</strong> The symlog transformation compared to log and the identity function. Symlog compresses large values while keeping small values approximately linear, and unlike log it handles negative values. This is what allows one configuration to handle reward scales that differ by orders of magnitude.</figcaption>
+        </figure>
+
+        <h3>Two-Hot Encoding</h3>
+        <p>If you squash your targets using symlog, your neural network now has to predict symlog-scaled values. But predicting exact continuous numbers (regression) is notoriously spiky and unstable in RL. DreamerV3 solves this by converting continuous regression into discrete classification using two-hot encoding.</p>
+
+        <p>Instead of predicting a single number like <code>4.2</code>, you define 255 discrete buckets (from -20 to 20). <code>4.2</code> falls between the bucket for 4 and the bucket for 5, so you put 80% of the probability weight in the 4 bucket and 20% in the 5 bucket. The network outputs a softmax over these 255 buckets. The loss function becomes a simple cross-entropy loss, which is vastly more stable to optimize than Mean Squared Error.</p>
+
+        <h3>Unimix</h3>
+        <p>Categorical distributions are great, but they can suffer from catastrophic collapse if the network becomes too confident too early and assigns 100% probability to a single bucket. To fix this, DreamerV3 introduces Unimix. It mixes the network's predicted logits with a uniform distribution (where every bucket is equally likely) by a small factor (1%). This mathematically prevents the probability of any single bucket from dropping to exactly zero, which saves the cross-entropy loss from exploding to infinity.</p>
+
+        <h3>Free Nats and KL Scaling</h3>
+        <p>In the world model, the dynamics predictor tries to guess the future state (the prior), and the representation model corrects it using the actual image (the posterior). You want the prior to match the posterior, which is enforced by minimizing the KL divergence between them.</p>
+
+        <p>But there's a problem: if the KL penalty is too strong, the representation model will just ignore the real image and output garbage so it matches the ignorant prior. To stop this, V3 uses "free nats", which says: <em>"As long as the KL divergence is below 1.0, don't penalize it at all. Let the representation model learn what it needs to learn."</em></p>
+
+        <p>Additionally, V3 scales the gradients so that the dynamics predictor does 90% of the moving to catch up to the representation model, and the representation model only does 10% of the moving. (In the loss function, the dynamics KL gets a weight of 1.0, and the representation KL gets a weight of 0.1).</p>
+
+        <p>Those are the changes on paper. Now let me talk about what happened when I actually tried to implement all of this.</p>
+
+        <hr class="section-break">
+
+        <h2 id="sec-3"><span class="section-number">3</span> The Bugs That Don't Crash</h2>
+        <p>Implementing DreamerV3 correctly took weeks of resilience. These were some of the standout bugs I encountered, the solution and the impact of fixing them. Some of the early failures were loud, NaNs and collapses that at least told me something was wrong. The bugs that nearly ended the project were the silent ones. All my losses were healthy but you still cant figure out why the agent isn't breaking out.</p>
+
+        <figure class="wide bordered">
+            <img src="dreamerv3blog/fig_metrics.png" alt="Training diagnostics">
+            <figcaption><strong>Figure 4.</strong> Six panels of training diagnostics. Notice how the loss curves (actor entropy, reconstruction loss, dynamics KL) all look completely healthy and appear to be converging smoothly, which is exactly what makes these silent bugs so difficult to catch! </figcaption>
+        </figure>
+
+        <p>I also tried to explore some things out of curiosity. The experiments failed badly, but a good friend of mine once told me that just trying is enough. It doesn't have to work, just try! Trying is all you need. They are described below:</p>
+
+        <h3>1. Mean vs Sum Reduction</h3>
+        <p>The agent was moving randomly even though the loss curves looked completely healthy. The world model's KL divergence had plummeted to the exact free nats floor and flatlined. It turned out I used a mean reduction instead of a sum reduction on the image reconstruction loss. I was basically dividing the image gradient by a massive factor of 12,288. The world model was not learning to reconstruct the image at all, it was just predicting a blurry gray mess, so the actor was flying completely blind.</p>
+
+<pre><code># The bug:
+recons_loss = optax.l2_loss(recons_obs, _obs).mean(-1)
+
+# The fix:
+recons_loss = optax.l2_loss(recons_obs, _obs).sum(-1)</code></pre>
+
+        <h3>2. The Continue Head Trap</h3>
+        <p>The Continue Head predicts whether an episode is done or not. For the longest time, my agent was learning slowly and dying constantly. I realized the Continue predictor was predicting <code>1.0</code> everywhere. It thought the episode would never end, so the actor never learned to avoid death.</p>
+        
+        <p>Because the network is initialized randomly, it takes time for it to realize that death exists (since death is rare early on). To fix this, I found out from Hafner's reference code that the final layer of the Continue Head must be strictly zero-initialized. This forces it to predict <code>0.5</code> (uncertainty) at the start, making it aggressively learn from the first few deaths it encounters.</p>
+
+        <h3>3. Variable Shadowing in Vmap</h3>
+        <p>JAX's <code>vmap</code> is powerful but dangerous. Inside my world model rollout loop, I was overwriting a state variable with its vmapped counterpart, effectively severing the gradient graph. The model compiled perfectly and ran fast, but the BPTT (Backpropagation Through Time) gradients were secretly getting zeroed out halfway through the sequence. It took hours of staring at JAX traces to find it.</p>
+
+        <h3>4. Action Space Alignment</h3>
+        <p>MinAtar Breakout has 6 possible actions, but only 3 actually do anything (Left, Right, Fire). In my environment wrapper, I had a silent off-by-one error where the actor's chosen action was getting shifted. The network was mathematically optimizing a perfect policy for an agent that was physically pressing the wrong buttons in the emulator.</p>
+
+        <h3>Experiment 1: Rollout Slicing</h3>
+        <p>During an earlier stretch of this project I was running DreamerV3 on Crafter.</p>
+
+        <figure class="wide bordered">
+            <img src="dreamerv3blog/crafter_sharp.gif" alt="Crafter gameplay">
+            <figcaption><strong>Figure 5.</strong> A trained DreamerV3 agent surviving in Crafter. The agent has to eat, drink, get through the night, deal with zombies, and build tools, all from raw pixels.</figcaption>
+        </figure>
+
+        <p>At some point I tried to cut imagination compute by seeding rollouts from only the last 8 states of each training sequence, 128 starts instead of 1024. I assumed that the future states would have more information and less noise since the later states are better than the early ones.</p>
+
+        <p>On Breakout this didn't really make a difference. But on Crafter it was very bad. I trained Crafter for 1 million steps and it didn't have the normal performance of a 1 million step run. The agent was getting 8x less gradients during imagination. The agent was not able to learn the beginning well, so it could not utilize the last 8 states anyway. It happened like this because Crafter is extremely hard. It tests true intelligence, the agent has to survive zombies, live through different times (day and night), eat and so on to survive.</p>
+
+        <p>My hypothesis is that the agent can still converge if given enough steps, maybe 8 million, it can still reach what the full 1024-start version reaches in 1 million. This is something probably worth looking into in the future. In the repo I flattened all states because there was no reason to keep the experiment.</p>
+
+        <h3>Experiment 2: GRU Retention Bias</h3>
+        <p>I found out that my GRU was retaining information by 50% and found out that there is a classic deep learning trick for it that traces back to early recurrent architecture research. Adding a +1.0 bias (in my keep-gate convention) makes the agent remember 73% of information from the past at every timestep, a steal.</p>
+
+<pre><code># Standard GRU keep gate (50% retention)
+z = jax.nn.sigmoid(z_logits)
+
+# The 73% retention trick
+z = jax.nn.sigmoid(z_logits + 1.0)</code></pre>
+
+        <p>This is not really important for games like MinAtar Breakout, but for games like Crafter and Minecraft that are very long horizon, you need the agent to remember information very well for true generalization.</p>
+
+        <p>To sanity check it, I ran a tiny toy task with and without the offset. The curves came out nearly identical, which is exactly what I should have expected, because a short dense task doesn't need long memory. The real argument is simpler than any training run. At initialization, a standard keep gate retains 50% of its state each step, so after 15 steps of imagination a signal from the start has decayed to about 0.003%. With the offset it retains 73%, leaving about 1.2%. That is over 400 times more of the past surviving a single rollout, compounding at every step. On Breakout, nothing needs to survive that long. On Crafter, where the agent has to remember where it left things for hundreds of steps, I suspect this is the difference between memory and amnesia. That part I have not tested on a real game, but it is the first thing I would test if I take this to a longer environment.</p>
+
+        <figure class="wide bordered">
+            <img src="dreamerv3blog/gru_loss_curve.png" alt="GRU Retention curve">
+            <figcaption><strong>Figure 6.</strong> GRU memory retention test: the curves are nearly identical, as expected. The trick's value is in long-horizon retention, which a short dense task can't show.</figcaption>
+        </figure>
+
+        <hr class="section-break">
+
+        <h2 id="sec-4"><span class="section-number">4</span> The Results</h2>
+        <p>I used Crafter for a lot of the heavy experiments, but after fixing all those core bugs, I just wanted a fast, clean baseline to prove the whole architecture was finally locked in. I trained the final agent on MinAtar Breakout for 300,000 steps. MinAtar environments are not really beautiful, they are just basic grids, but they are perfect to prove that the math actually works.</p>
+
+        <figure class="wide bordered">
+            <img src="dreamerv3blog/breakout_score.png" alt="Breakout Training Curve">
+            <figcaption><strong>Figure 7.</strong> Training curve on MinAtar Breakout over 300,000 environment steps. The shaded region shows the standard deviation across episodes.</figcaption>
+        </figure>
+
+        <p>The agent hit a mean score of 14.76 with a standard deviation of 3.97, evaluated with a greedy argmax policy over 100 evaluation episodes. For context, a random policy on MinAtar Breakout scores around 1 to 2, and a standard model-free agent like DQN scores around 10 after 1 million steps, with stronger variants like QR-DQN and C51 reaching 14 to 16. So a world model agent reaching 14.76 in just 300,000 steps, matching distributional DQN variants at a fraction of the environment interactions, is a solid result. As you can see from the curve, once the bugs were cleared out, it just converged smoothly.</p>
+
+        <h3>World Model Reconstructions</h3>
+        <p>The first thing I needed to check was whether the world model was actually seeing the environment, or if it was still predicting that blurry gray mess.</p>
+
+        <figure class="wide bordered">
+            <img src="dreamerv3blog/breakout_recon.png" alt="Reconstruction grid">
+            <figcaption><strong>Figure 8.</strong> Ground truth observations (top) and the world model's reconstructed observations (bottom) across consecutive timesteps. The decoder learned to compress and reconstruct the pixel observations accurately.</figcaption>
+        </figure>
+
+        <p>The decoder actually learned to compress and uncompress the pixels well. The ground truth observation matches the reconstructed observation perfectly. It knows exactly where the bouncing pixel, the paddle, and the blocks are.</p>
+
+        <h3>Playing vs. Dreaming</h3>
+        <p>This is where the Dreamer architecture becomes really interesting.</p>
+
+        <figure class="wide bordered">
+            <img src="dreamerv3blog/breakout_playing.gif" alt="Agent playing Breakout">
+            <figcaption><strong>Figure 9.</strong> The agent playing real Breakout. It is selecting actions and getting real observations from the game engine.</figcaption>
+        </figure>
+
+        <p>This first gif is the agent actually playing the real Breakout environment. It is selecting actions and getting real observations from the game engine.</p>
+
+        <figure class="wide bordered" style="overflow-x: auto; white-space: nowrap; padding-bottom: 10px;">
+            <img src="dreamerv3blog/fig_dream_rollout.png" alt="Filmstrip of the dream" style="min-width: 1300px; display: block; margin: 0 auto;">
+            <figcaption style="white-space: normal; margin-top: 15px;"><strong>Figure 10.</strong> A full 10-step filmstrip of the dream rollout. Top row is reality, bottom row is the model's imagination.</figcaption>
+        </figure>
+
+        <p>This shows a complete hallucination. The agent is predicting the future entirely inside its own neural network. It is imagining the pixel's trajectory, the paddle movement and the blocks without ever touching the real environment. The world model is so stable it can dream up a perfectly coherent game state and train its actor critic entirely inside its own head.</p>
+
+        <hr class="section-break">
+
+        <h2 id="sec-5"><span class="section-number">5</span> Conclusion</h2>
+        <p>Yeah, and that is it. This is DreamerV3.</p>
+
+        <p>I hosted the full code on <a href="https://github.com/ojayballer/BeyondImagination" target="_blank">GitHub</a> and I intentionally wrote it in a minimal, easy to understand format. I finally stabilized it after two full rewrites, and I have learned a lot from this project both theoretically and technically. It feels good to finally see it work.</p>
+
+        <p>The journey has been really interesting. I have now covered the Dreamer lineage, starting from <a href="world-models.html">Ha and Schmidhuber</a>, to <a href="planet.html">PlaNet</a>, <a href="dreamer.html">DreamerV1</a>, <a href="dreamerv2.html">DreamerV2</a>, and now DreamerV3. I don't know what comes next, but I will keep studying world models. It is a truly beautiful paradigm.</p>
+
+        <p>I hope this was worth a read. If you have any questions or suggestions, please reach out to me on <a href="https://x.com/ojbaby_11" target="_blank" style="display: inline-flex; align-items: center; font-weight: 500;"><svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="vertical-align: middle; margin-right: 4px; position: relative; top: -1px;"><path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 24.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/></svg>@ojbaby_11</a>.</p>
+
+        <!-- ==================== REFERENCES ==================== -->
+        <div class="references" id="sec-refs">
+            <h2>References</h2>
+            <ol>
+                <li>Ha, D. & Schmidhuber, J. (2018). <a href="https://worldmodels.github.io/">World Models</a>. arXiv:1803.10122.</li>
+                <li>Hafner, D., Lillicrap, T., Fischer, I., Villegas, R., Ha, D., Lee, H. & Davidson, J. (2019). <a href="https://arxiv.org/abs/1811.04551">Learning Latent Dynamics for Planning from Pixels</a>. ICML 2019.</li>
+                <li>Hafner, D., Lillicrap, T., Ba, J. & Norouzi, M. (2020). <a href="https://arxiv.org/abs/1912.01603">Dream to Control: Learning Behaviors by Latent Imagination</a>. ICLR 2020.</li>
+                <li>Hafner, D., Lillicrap, T., Norouzi, M. & Ba, J. (2021). <a href="https://arxiv.org/abs/2010.02193">Mastering Atari with Discrete World Models</a>. ICLR 2021.</li>
+                <li>Hafner, D., Pasukonis, J., Ba, J. & Lillicrap, T. (2025). <a href="https://arxiv.org/abs/2301.04104">Mastering Diverse Domains through World Models</a>. Nature.</li>
+                <li>Young, K. & Tian, T. (2019). <a href="https://arxiv.org/abs/1903.03176">MinAtar: An Atari-Inspired Testbed for Thorough and Reproducible Reinforcement Learning Experiments</a>. arXiv:1903.03176.</li>
+            </ol>
+        </div>
+
+    </main>
+
+    <!-- ==================== FOOTER ==================== -->
+    <footer class="article-footer">
+        <div class="footer-line">
+            <a href="https://ojayballer.github.io">Omojire Kuseju</a> · 2026
+        </div>
+    </footer>
+
+</body>
+</html>
