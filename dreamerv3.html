@@ -130,19 +130,19 @@
         <hr class="section-break">
 
         <h2 id="sec-2"><span class="section-number">2</span> What Changed</h2>
-        <p>DreamerV3 did not introduce a fundamentally new paradigm. The actor critic, recurrent state space model, encoder, decoder, and all the other main components that make up the Dreamer lineage are still here. What changed was the reward scaling, losses, KL balancing, and network components like Block GRU, RMSNorm, and SiLU activations. These are all stability improvements, and they are exactly what V1 and V2 were missing. With them, DreamerV3 becomes robust across 150+ tasks without reconfiguring.</p>
+        <p>DreamerV3 did not introduce a fundamentally new paradigm. The actor critic, recurrent state space model, encoder, decoder, and all the other main components that make up the Dreamer lineage are still here. What changed was the reward scaling, losses, KL balancing, and network components like Block GRU, RMSNorm, and SiLU activations. These are all stability improvements, and they provide a big part of the stability that V1 and V2 were lacking. With them, DreamerV3 becomes robust across 150+ tasks without reconfiguring.</p>
 
-        <p>I also want to note that the naming conventions between the papers are a bit confusing. In V2 we had the Representation Model, which was the posterior, and the Transition Model, which was the prior. Then in the V3 paper they started calling them the Encoder and the Dynamics Predictor. Just note that in case you get confused reading the papers.</p>
+        <p>I also want to note that the naming conventions across these papers can be a bit confusing. In V2, the prior was called the Dynamics Model and the posterior the Representation Model. In the V3 paper's equations, they rename the prior to the Dynamics Predictor, and group the CNN and the posterior together under the name "Encoder". However, in actual code (including my repo), we still split them up: the CNN is the <code>Encoder</code>, and the posterior is the <code>RepresentationModel</code>.</p>
 
         <figure class="wide bordered">
             <img src="dreamerv3blog/dreamerv3_arch.png" alt="The DreamerV3 architecture">
             <figcaption><strong>Figure 2.</strong> The DreamerV3 architecture. (a) shows the world model learning loop where the encoder, RSSM, and decoder are trained on real experience. (b) shows the actor critic learning loop where behaviour is trained entirely inside imagined rollouts.</figcaption>
         </figure>
 
-        <p>The core RSSM equations are the same as V2, so I will not re-derive them. Here they are for reference:</p>
+        <p>The core RSSM equations are the same as V2, so I will not re-derive them. Here they are for reference, matching the V3 paper's notation:</p>
 
         <p><strong>Sequence Model:</strong> $h_t = f(h_{t-1}, z_{t-1}, a_{t-1})$</p>
-        <p><strong>Encoder (Posterior):</strong> $z_t \sim q(z_t \mid h_t, x_t)$</p>
+        <p><strong>Encoder (CNN + Posterior):</strong> $z_t \sim q(z_t \mid h_t, x_t)$</p>
         <p><strong>Dynamics Predictor (Prior):</strong> $\hat{z}_t \sim p(\hat{z}_t \mid h_t)$</p>
         <p><strong>Reward Predictor:</strong> $r_t \sim p(r_t \mid h_t, z_t)$</p>
         <p><strong>Continue Predictor:</strong> $c_t \sim p(c_t \mid h_t, z_t)$</p>
@@ -251,7 +251,7 @@ adv = sg(
     jnp.maximum(1.0, ret_norm)
 )</code></pre>
 
-        <p>When a rare reward finally appears, the advantage needs to be large enough for the agent to care about it, but it also cannot be allowed to explode because the returns barely changed before that point. This is one of the changes that makes surviving the reward dip possible. The agent has to keep exploring even when rewards are extremely sparse instead of getting stuck repeatedly visiting states it already knows. This is what allowed DreamerV3 to collect diamonds in Minecraft from scratch, without human data or a manually designed curriculum.</p>
+        <p>When a rare reward finally appears, the advantage needs to be large enough for the agent to care about it, but it also cannot be allowed to explode because the returns barely changed before that point. This is one of the changes that makes surviving the reward dip possible. The agent has to keep exploring even when rewards are extremely sparse instead of getting stuck repeatedly visiting states it already knows. A big part of what let DreamerV3 collect diamonds in Minecraft from scratch, without human data or a manually designed curriculum.</p>
 
         <p>Those are the changes on paper. Now let me talk about what happened when I actually tried to implement all of this.</p>
 
@@ -283,9 +283,9 @@ recons_loss = optax.l2_loss(recons_obs, _obs).reshape(
         <h3>2. Continue Head Initialization</h3>
         <p>At one point I was convinced that the Continue head was ruining the imagined rollouts. If you initialize a standard MLP, the biases start at zero, so the output sigmoid is balanced at 0.5. I reasoned that the agent was born believing every episode had a 50/50 chance of ending at every step, which limits its planning horizon to just two steps.</p>
 
-        <p>I was ready to hardcode a heavy bias initialization just to force the agent to explore. But I dug into Hafner's reference code and realized that it ships with a zero initialization anyway. For environments like Breakout, the gradients are strong enough that the network learns the true episode length almost instantly. I left it at zero. The bug was entirely in my head.</p>
+        <p>I was ready to hardcode a heavy bias initialization just to force the agent to explore. But since the paper explicitly states it should be zero-initialized, I just followed the paper. For environments like Breakout, the gradients are strong enough that the network learns the true episode length almost instantly. I left it at zero. The bug was entirely in my head.</p>
 
-        <p>The contrast with the GRU gate in Experiment 2 is interesting: same suspicious math, opposite verdicts, because the continue head gets corrected every single step while the recurrent memory has to be right from the start.</p>
+        <p>The contrast with the GRU gate in Experiment 2 is interesting: the same suspicious math but opposite verdicts, because the continue head gets corrected every single step while the recurrent memory has to be right from the start.</p>
         
         <p>With that paranoia behind me, I moved on to something that turned out to be much worse.</p>
 
@@ -333,7 +333,7 @@ def body(carry, x):
         <p>My hypothesis is that the agent can still converge if given enough steps, maybe 8 million, it can still reach what the full 1024-start version reaches in 1 million. This is something probably worth looking into in the future. In the repo I flattened all states because there was no reason to keep the experiment.</p>
 
         <h3>Experiment 2: GRU Retention Bias</h3>
-        <p>I found out that my GRU was retaining information by 50% and found out that there is a classic deep learning trick for it that traces back to early recurrent architecture research. Adding a +1.0 bias (in my keep-gate convention) makes the agent remember 73% of information from the past at every timestep, a steal.</p>
+        <p>I found out that my GRU was retaining information by 50% and found out that there is a classic deep learning trick for it that traces back to early recurrent architecture research (Jozefowicz et al., 2015). Adding a +1.0 bias (in my keep-gate convention) makes the agent remember 73% of information from the past at every timestep, a steal.</p>
 
 <pre><code># Standard GRU keep gate (50% retention)
 z = jax.nn.sigmoid(z_logits)
@@ -343,7 +343,7 @@ z = jax.nn.sigmoid(z_logits + 1.0)</code></pre>
 
         <p>This is not really important for games like MinAtar Breakout, but for games like Crafter and Minecraft that are very long horizon, you need the agent to remember information very well for true generalization.</p>
 
-        <p>To sanity check it, I ran a tiny toy task with and without the offset. The curves came out nearly identical, which is exactly what I should have expected, because a short dense task doesn't need long memory. The real argument is simpler than any training run. At initialization, a standard keep gate retains 50% of its state each step, so after 15 steps of imagination a signal from the start has decayed to about 0.003%. With the offset it retains 73%, leaving about 1.2%. That is over 400 times more of the past surviving a single rollout, compounding at every step. On Breakout, nothing needs to survive that long. On Crafter, where the agent has to remember where it left things for hundreds of steps, I suspect this is the difference between memory and amnesia. That part I have not tested on a real game, but it is the first thing I would test if I take this to a longer environment.</p>
+        <p>To sanity check it, I ran a tiny toy task with and without the offset. The curves came out nearly identical, which is exactly what I should have expected, because a short dense task doesn't need long memory. The real argument is simpler than any training run. At initialization, a standard keep gate retains 50% of its state each step, so after 15 steps of imagination a signal from the start has decayed to about 0.003%. With the offset it retains 73%, leaving about 0.89%. That is nearly 300 times more of the past surviving a single rollout, compounding at every step. On Breakout, nothing needs to survive that long. On Crafter, where the agent has to remember where it left things for hundreds of steps, I suspect this is the difference between memory and amnesia. That part I have not tested on a real game, but it is the first thing I would test if I take this to a longer environment.</p>
 
         <figure class="wide bordered">
             <img src="dreamerv3blog/gru_loss_curve.png" alt="GRU Retention curve">
@@ -360,7 +360,7 @@ z = jax.nn.sigmoid(z_logits + 1.0)</code></pre>
             <figcaption><strong>Figure 7.</strong> Training curve on MinAtar Breakout over 300,000 environment steps. The shaded region shows the standard deviation across episodes.</figcaption>
         </figure>
 
-        <p>The agent hit a mean score of 14.76 with a standard deviation of 3.97, evaluated with a greedy argmax policy over 100 evaluation episodes. For context, a random policy on MinAtar Breakout scores around 1 to 2, and a standard model-free agent like DQN scores around 10 after 1 million steps, with stronger variants like QR-DQN and C51 reaching 14 to 16. So a world model agent reaching 14.76 in just 300,000 steps, matching distributional DQN variants at a fraction of the environment interactions, is a solid result. As you can see from the curve, once the bugs were cleared out, it just converged smoothly.</p>
+        <p>The agent hit a mean score of 14.76 with a standard deviation of 3.97, evaluated with a greedy argmax policy over 100 evaluation episodes. For context, a random policy on MinAtar Breakout scores around 0.5, and a standard model-free agent like DQN scores around 10 after 1 million steps, with stronger variants like QR-DQN and C51 reaching 14 to 16. So a world model agent reaching 14.76 in just 300,000 steps, matching distributional DQN variants at a fraction of the environment interactions, is a solid result. As you can see from the curve, once the bugs were cleared out, it just converged smoothly.</p>
 
         <h3>World Model Reconstructions</h3>
         <p>The first thing I needed to check was whether the world model was actually seeing the environment, or if it was still predicting that blurry gray mess.</p>
@@ -410,6 +410,7 @@ z = jax.nn.sigmoid(z_logits + 1.0)</code></pre>
                 <li>Hafner, D., Lillicrap, T., Norouzi, M. & Ba, J. (2021). <a href="https://arxiv.org/abs/2010.02193">Mastering Atari with Discrete World Models</a>. ICLR 2021.</li>
                 <li>Hafner, D., Pasukonis, J., Ba, J. & Lillicrap, T. (2025). <a href="https://arxiv.org/abs/2301.04104">Mastering Diverse Domains through World Models</a>. Nature.</li>
                 <li>Young, K. & Tian, T. (2019). <a href="https://arxiv.org/abs/1903.03176">MinAtar: An Atari-Inspired Testbed for Thorough and Reproducible Reinforcement Learning Experiments</a>. arXiv:1903.03176.</li>
+                <li>Jozefowicz, R., Zaremba, W. & Sutskever, I. (2015). <a href="https://proceedings.mlr.press/v37/jozefowicz15.html">An Empirical Exploration of Recurrent Network Architectures</a>. ICML 2015.</li>
             </ol>
         </div>
 
