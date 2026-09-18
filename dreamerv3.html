@@ -358,7 +358,7 @@ z = jax.nn.sigmoid(z_logits + 1.0)</code></pre>
 
         <figure class="wide bordered">
             <img src="dreamerv3blog/breakout_score.png" alt="Breakout Training Curve">
-            <figcaption><strong>Figure 7.</strong> Training curve on MinAtar Breakout over 300,000 environment steps. The shaded region shows the standard deviation across episodes.</figcaption>
+            <figcaption><strong>Figure 7.</strong> Training curve on MinAtar Breakout over 300,000 environment steps. The shaded region shows the 25th-75th percentile across episodes.</figcaption>
         </figure>
 
         <p>The agent hit a mean score of 14.76 with a standard deviation of 3.97, evaluated with a greedy argmax policy over 100 evaluation episodes. For context, a random policy on MinAtar Breakout scores around 0.5, and a standard model-free agent like DQN scores around 10 after 1 million steps, with stronger variants like QR-DQN and C51 reaching 14 to 16. So a world model agent reaching 14.76 in just 300,000 steps, matching distributional DQN variants at a fraction of the environment interactions, is a solid result. As you can see from the curve, once the bugs were cleared out, it just converged smoothly.</p>
