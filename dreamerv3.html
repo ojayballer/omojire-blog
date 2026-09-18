@@ -252,18 +252,18 @@ adv = sg(
     jnp.maximum(1.0, ret_norm)
 )</code></pre>
 
-        <p>When a rare reward finally appears, the advantage needs to be large enough for the agent to care about it, but it also cannot be allowed to explode because the returns barely changed before that point. This is one of the changes that makes surviving the reward dip possible. The agent has to keep exploring even when rewards are extremely sparse instead of getting stuck repeatedly visiting states it already knows. A big part of what let DreamerV3 collect diamonds in Minecraft from scratch, without human data or a manually designed curriculum.</p>
+        <p>When a rare reward finally appears, the advantage needs to be large enough for the agent to care about it, but it also cannot be allowed to explode because the returns barely changed before that point. This is one of the changes that makes surviving the reward dip possible. The agent has to keep exploring even when rewards are extremely sparse instead of getting stuck repeatedly visiting states it already knows. This is a big part of what let DreamerV3 collect diamonds in Minecraft from scratch, without human data or a manually designed curriculum.</p>
 
         <p>Those are the changes on paper. Now let me talk about what happened when I actually tried to implement all of this.</p>
 
         <hr class="section-break">
 
         <h2 id="sec-3"><span class="section-number">3</span> The Bugs That Don't Crash</h2>
-        <p>Implementing DreamerV3 correctly took weeks of resilience. These were some of the standout bugs I encountered, the solution and the impact of fixing them. Some of the early failures were loud, NaNs and collapses that at least told me something was wrong. The bugs that nearly ended the project were the silent ones. All my losses were healthy but you still cant figure out why the agent isn't breaking out.</p>
+        <p>Implementing DreamerV3 correctly took weeks of resilience. These were some of the standout bugs I encountered, the solution and the impact of fixing them. Some of the early failures were loud, NaNs and collapses that at least told me something was wrong. The bugs that nearly ended the project were the silent ones. All my losses were healthy but you still can't figure out why the agent isn't breaking out.</p>
 
         <figure class="wide bordered">
             <img src="dreamerv3blog/fig_metrics.png" alt="Training diagnostics">
-            <figcaption><strong>Figure 4.</strong> Six panels of training diagnostics. Notice how the loss curves (actor entropy, reconstruction loss, dynamics KL) all look completely healthy and appear to be converging smoothly, which is exactly what makes these silent bugs so difficult to catch! </figcaption>
+            <figcaption><strong>Figure 4.</strong> Six panels of training diagnostics. Notice how the metrics (actor entropy, reconstruction loss, dynamics KL) all look completely healthy and appear to be converging smoothly, which is exactly what makes these silent bugs so difficult to catch! </figcaption>
         </figure>
 
         <p>I had to rewrite the architecture 2 times and make sure I wasn't missing anything that Danijar Hafner mentioned in the paper. I also tried to explore some things out of curiosity. The experiments failed badly, but a good friend of mine once told me that just trying is enough. It doesn't have to work, just try! Trying is all you need. They are described below:</p>
@@ -284,7 +284,7 @@ recons_loss = optax.l2_loss(recons_obs, _obs).reshape(
         <h3>2. Continue Head Initialization</h3>
         <p>At one point I was convinced that the Continue head was ruining the imagined rollouts. If you initialize a standard MLP, the biases start at zero, so the output sigmoid is balanced at 0.5. I reasoned that the agent was born believing every episode had a 50/50 chance of ending at every step, which limits its planning horizon to just two steps.</p>
 
-        <p>I was ready to hardcode a heavy bias initialization just to force the agent to explore. But since the paper explicitly states it should be zero-initialized, I just followed the paper. For environments like Breakout, the gradients are strong enough that the network learns the true episode length almost instantly. I left it at zero. The bug was entirely in my head.</p>
+        <p>I was ready to hardcode a heavy bias initialization just to force the agent to explore. But looking at the standard initialization, the biases start at zero anyway, so the agent is naturally born predicting a 50/50 continue probability. For environments like Breakout, the gradients are strong enough that the network learns the true episode length almost instantly. I left it alone. The bug was entirely in my head.</p>
 
         <p>The contrast with the GRU gate in Experiment 2 is interesting: the same suspicious math but opposite verdicts, because the continue head gets corrected every single step while the recurrent memory has to be right from the start.</p>
         
