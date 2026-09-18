@@ -132,17 +132,18 @@
         <h2 id="sec-2"><span class="section-number">2</span> What Changed</h2>
         <p>DreamerV3 did not introduce a fundamentally new paradigm. The actor critic, recurrent state space model, encoder, decoder, and all the other main components that make up the Dreamer lineage are still here. What changed was the reward scaling, losses, KL balancing, and network components like Block GRU, RMSNorm, and SiLU activations. These are all stability improvements, and they provide a big part of the stability that V1 and V2 were lacking. With them, DreamerV3 becomes robust across 150+ tasks without reconfiguring.</p>
 
-        <p>I also want to note that the naming conventions across these papers can be a bit confusing. In V2, the prior was called the Dynamics Model and the posterior the Representation Model. In the V3 paper's equations, they rename the prior to the Dynamics Predictor, and group the CNN and the posterior together under the name "Encoder". However, in actual code (including my repo), we still split them up: the CNN is the <code>Encoder</code>, and the posterior is the <code>RepresentationModel</code>.</p>
+        <p>I also want to note that the naming conventions between the papers and the code can be a bit confusing. As you can see in the papers, V2 called the posterior the Representation Model and the prior the Transition Predictor. Then in the V3 paper, they started calling them the Encoder and the Dynamics Predictor. However, in actual source code (including my repo), they are usually split up into separate classes: the CNN is the <code>Encoder</code>, the posterior is the <code>RepresentationModel</code>, and the prior is the <code>DynamicModel</code>. Just note that in case you get confused reading the papers while looking at the code.</p>
 
         <figure class="wide bordered">
             <img src="dreamerv3blog/dreamerv3_arch.png" alt="The DreamerV3 architecture">
             <figcaption><strong>Figure 2.</strong> The DreamerV3 architecture. (a) shows the world model learning loop where the encoder, RSSM, and decoder are trained on real experience. (b) shows the actor critic learning loop where behaviour is trained entirely inside imagined rollouts.</figcaption>
         </figure>
 
-        <p>The core RSSM equations are the same as V2, so I will not re-derive them. Here they are for reference, matching the V3 paper's notation:</p>
+        <p>The core RSSM equations are the same as V2, so I will not re-derive them. Here they are for reference, split up to match the code components:</p>
 
         <p><strong>Sequence Model:</strong> $h_t = f(h_{t-1}, z_{t-1}, a_{t-1})$</p>
-        <p><strong>Encoder (CNN + Posterior):</strong> $z_t \sim q(z_t \mid h_t, x_t)$</p>
+        <p><strong>Encoder (CNN):</strong> $e_t = \text{enc}(x_t)$</p>
+        <p><strong>Representation Model (Posterior):</strong> $z_t \sim q(z_t \mid h_t, e_t)$</p>
         <p><strong>Dynamics Predictor (Prior):</strong> $\hat{z}_t \sim p(\hat{z}_t \mid h_t)$</p>
         <p><strong>Reward Predictor:</strong> $r_t \sim p(r_t \mid h_t, z_t)$</p>
         <p><strong>Continue Predictor:</strong> $c_t \sim p(c_t \mid h_t, z_t)$</p>
